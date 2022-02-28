@@ -1,0 +1,3 @@
+Can you decipher this code? Here's a hint: Z=A; +=1; ~=10. Enter the message in the space below. Try to figure out the code without using the decryption tool for every letter. Can you think of a faster or easier way to solve this puzzle?
+
+Solving: Decoded message -> THE CENTRAL INTELLIGENCE AGENCY WAS CREATED IN 1947 WHEN PRESIDENT TRUMAN SIGNED THE NATIONAL SECURITY ACT

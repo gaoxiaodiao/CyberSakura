@@ -1,0 +1,2 @@
+buf = open("image1.png", "rb").read()
+open("file.pdf").write(buf[5253:])

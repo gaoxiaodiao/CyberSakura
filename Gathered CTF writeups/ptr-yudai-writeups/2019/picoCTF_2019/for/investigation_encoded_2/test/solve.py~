@@ -1,0 +1,3 @@
+with open("flag.txt", "w") as f:
+    f.write("t1m3f1i350000000000044f907cm")
+    

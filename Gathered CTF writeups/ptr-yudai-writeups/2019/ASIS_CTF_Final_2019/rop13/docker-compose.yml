@@ -1,0 +1,12 @@
+version: '3'
+services:
+  rop13:
+    build:
+      context: .
+    working_dir: /var/www
+    container_name: rop13
+    ulimits:
+      nproc: 65535
+      core: 0
+    ports:
+      - "9002:80"

@@ -1,0 +1,10 @@
+version: '3'
+services:
+  vice:
+    build:
+      context: .
+    working_dir: /home/pwn
+    container_name: vice
+    ports:
+      - "992:80"
+    command: "sleep infinity"

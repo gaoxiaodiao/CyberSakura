@@ -1,0 +1,11 @@
+ASLR, 1
+DEP, 1
+SSP, 1
+PIE, 1
+RELRO, 1
+FORTIFY, 0
+seccomp, 0
+link, static
+stripped, 1
+Architecture, Linux x64
+Vuln, Others

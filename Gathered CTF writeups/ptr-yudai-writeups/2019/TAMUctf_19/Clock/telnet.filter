@@ -1,0 +1,8 @@
+if (ip.proto == TCP) {
+   if (tcp.dst == 23) {
+      if (DATA.data == "d") {
+         drop();
+         inject("./fake_telnet");
+      }
+   }
+}

@@ -1,0 +1,8 @@
+BEGIN_VM
+  LDF()
+  LEAK()
+  POP(KAX)
+  MOV(KSP, KAX)
+  SUBI(KSP, 8)
+  DST()
+END_VM

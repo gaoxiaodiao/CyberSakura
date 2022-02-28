@@ -1,0 +1,14 @@
+#include <stdio.h>
+
+void blindpwn(void)
+{
+  char buf[40];
+  read();
+}
+
+int main(void)
+{
+  blindpwn();
+  puts("Goodbye!");
+  return 0;
+}

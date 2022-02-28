@@ -1,0 +1,7 @@
+a = randint(0, 2^235)
+p = next_prime(a * randint(0, 2^512), proof=False)
+q = next_prime(p + randint(0, 2^512), proof=False)
+print(p * q)
+print(a)
+print(p)
+print(q)

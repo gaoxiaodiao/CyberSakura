@@ -1,0 +1,2 @@
+#!/bin/bash
+./ld-2.29.so --library-path ./ ../note

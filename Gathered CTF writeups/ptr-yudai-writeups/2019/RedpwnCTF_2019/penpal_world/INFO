@@ -1,0 +1,11 @@
+ASLR, 1
+DEP, 1
+SSP, 1
+PIE, 1
+RELRO, 1
+FORTIFY, 0
+seccomp, 0
+link, dynamic
+stripped, 0
+Architecture, Linux x64
+Vuln, Use After Free

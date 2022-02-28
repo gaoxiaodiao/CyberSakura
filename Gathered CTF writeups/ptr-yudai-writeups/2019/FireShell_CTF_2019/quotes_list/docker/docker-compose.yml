@@ -1,0 +1,7 @@
+version: '3'
+services:
+  quotes_list:
+    build: .
+    ports:
+      - 2005:2005
+    entrypoint: /bin/init.sh

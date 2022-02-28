@@ -1,0 +1,5 @@
+We are not good at crypto, but at least we try. Your job is to find a way to reverse the algorithm from chall_clean.py and retrieve the secret.
+
+The "encrypted" message: f59d4ea17bf649c6bf1b3967fe2203b570fd180c4100247847348e20b86c6c7febacc33b5c2f9b8262e40edf114d55286f5d7634735e3671674c5a
+
+Flag Format: DCTF{[a-z0-9_-]}

@@ -1,0 +1,53 @@
+Foremost version 1.5.7 by Jesse Kornblum, Kris Kendall, and Nick Mikus
+Audit File
+
+Foremost started at Sat Jun 15 17:53:08 2019
+Invocation: foremost hfs_superdrive 
+Output directory: /home/ptr/midnight/hfs_drive/output
+Configuration file: /etc/foremost.conf
+------------------------------------------------------------------
+File: hfs_superdrive
+Start: Sat Jun 15 17:53:09 2019
+Length: 1 MB (1474560 bytes)
+ 
+Num	 Name (bs=512)	       Size	 File Offset	 Comment 
+
+0:	00000005.jpg 	       4 KB 	       2560 	 
+1:	00000015.jpg 	       4 KB 	       7680 	 
+2:	00000025.jpg 	       5 KB 	      12800 	 
+3:	00000037.jpg 	       3 KB 	      18944 	 
+4:	00000045.jpg 	       4 KB 	      23040 	 
+5:	00000054.jpg 	       4 KB 	      27648 	 
+6:	00000064.jpg 	       4 KB 	      32768 	 
+7:	00000074.jpg 	       5 KB 	      37888 	 
+8:	00000086.jpg 	       6 KB 	      44032 	 
+9:	00000099.jpg 	       5 KB 	      50688 	 
+10:	00000110.jpg 	       5 KB 	      56320 	 
+11:	00000121.jpg 	       6 KB 	      61952 	 
+12:	00000135.jpg 	       5 KB 	      69120 	 
+13:	00000146.jpg 	       5 KB 	      74752 	 
+14:	00000158.jpg 	       6 KB 	      80896 	 
+15:	00000171.jpg 	       3 KB 	      87552 	 
+16:	00000178.jpg 	       5 KB 	      91136 	 
+17:	00000189.jpg 	       3 KB 	      96768 	 
+18:	00000197.jpg 	       4 KB 	     100864 	 
+19:	00000207.jpg 	       5 KB 	     105984 	 
+20:	00000218.jpg 	       4 KB 	     111616 	 
+21:	00000228.jpg 	       4 KB 	     116736 	 
+22:	00000238.jpg 	       5 KB 	     121856 	 
+23:	00000250.jpg 	       4 KB 	     128000 	 
+24:	00000260.jpg 	       4 KB 	     133120 	 
+25:	00000270.jpg 	       3 KB 	     138240 	 
+26:	00000278.jpg 	       5 KB 	     142336 	 
+27:	00000289.jpg 	       5 KB 	     147968 	 
+28:	00000300.jpg 	       4 KB 	     153600 	 
+29:	00000309.jpg 	       4 KB 	     158208 	 
+30:	00000318.jpg 	       4 KB 	     162816 	 
+Finish: Sat Jun 15 17:53:09 2019
+
+31 FILES EXTRACTED
+	
+jpg:= 31
+------------------------------------------------------------------
+
+Foremost finished at Sat Jun 15 17:53:09 2019

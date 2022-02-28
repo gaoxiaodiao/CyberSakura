@@ -1,0 +1,13 @@
+version: '3'
+services:
+  md5_online:
+    build:
+      context: .
+    working_dir: /home/pwn
+    container_name: md5_online
+    ulimits:
+      nproc: 65535
+      core: 0
+    ports:
+      - "9004:9004"
+    entrypoint: /etc/init.sh

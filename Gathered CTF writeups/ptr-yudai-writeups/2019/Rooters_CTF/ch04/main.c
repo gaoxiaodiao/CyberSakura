@@ -1,0 +1,64 @@
+// gcc ghidra.c
+#include <stdio.h>
+
+int main(void) {
+  unsigned char encoded[] = {0x3c, 0x7f, 0xb6, 0x68, 0x9f, 0xd6, 0x98, 0xc7, 0xb4, 0xd5, 0x8c, 0x1d, 0x6a, 0xda, 0xd4, 0x24, 0xb3, 0x8b, 0x96, 0x34, 0xf6, 0xe6, 0x76, 0xcb, 0x0c, 0xc9, 0x62, 0xac, 0xc2, 0xf0, 0xa0, 0x36, 0x96, 0xbf, 0x76, 0x5a, 0xbb, 0x76, 0x0e, 0x92, 0x3b, 0x29, 0x4a, 0x55, 0xe6, 0xee, 0xca, 0x59, 0x00};
+  unsigned int i;
+  unsigned char x;
+  for (i = 0; i < 0x30; i++) {
+    x = encoded[i];
+    x ^= 0xff;
+    x += i;
+    x ^= i;
+    x -= 0x53;
+    x ^= 0xff;
+    x += i;
+    x ^= 0xff;
+    x = (x >> 2) | (x << 6);
+    x -= i;
+    x = (x >> 7) | (x + x);
+    x ^= i;
+    x += 0x21;
+    x ^= i;
+    x = (x >> 1) | (x << 7);
+    x -= i;
+    x ^= i;
+    x -= i;
+    x = (x ^ 0xff) + 1;
+    x -= i;
+    x = (x >> 1) | (x << 7);
+    x ^= 0x84;
+    x = (x >> 2) | (x << 6);
+    x ^= 0xbd;
+    x = (x >> 5) | (x << 3);
+    x -= 0x7f;
+    x ^= 0xff;
+    x += i;
+    x ^= 0xff;
+    x += 0x7c;
+    x ^= 0xc9;
+    x ^= 0xff;
+    x -= 0x37;
+    x ^= 0xff;
+    x = (x ^ 0xff) + 1;
+    x = (x >> 5) | (x << 3);
+    x -= i;
+    x ^= i;
+    x += i;
+    x = (x ^ 0xff) + 1;
+    x ^= 0xff;
+    x -= 0x7d;
+    x ^= i;
+    x -= 0x1e;
+    x ^= 0x1e;
+    x -= 4;
+    x = (x >> 6) | (x << 2);
+    x ^= i;
+    x += i;
+    x = (x >> 2) | (x << 6);
+    x ^= 0xff;
+    encoded[i] = x;
+    printf("%02x ", encoded[i]);
+  }
+  printf("\n%s\n", encoded);
+}

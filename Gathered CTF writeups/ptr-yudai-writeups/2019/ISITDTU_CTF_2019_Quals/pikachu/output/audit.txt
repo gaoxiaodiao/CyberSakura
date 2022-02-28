@@ -1,0 +1,23 @@
+Foremost version 1.5.7 by Jesse Kornblum, Kris Kendall, and Nick Mikus
+Audit File
+
+Foremost started at Sun Jun 30 18:39:11 2019
+Invocation: foremost basic steganography.jpg 
+Output directory: /home/ptr/isitdtu/pikachu/output
+Configuration file: /etc/foremost.conf
+------------------------------------------------------------------
+File: basic steganography.jpg
+Start: Sun Jun 30 18:39:12 2019
+Length: 17 MB (18638772 bytes)
+ 
+Num	 Name (bs=512)	       Size	 File Offset	 Comment 
+
+0:	00000000.jpg 	      17 MB 	          0 	 
+Finish: Sun Jun 30 18:39:12 2019
+
+1 FILES EXTRACTED
+	
+jpg:= 1
+------------------------------------------------------------------
+
+Foremost finished at Sun Jun 30 18:39:12 2019

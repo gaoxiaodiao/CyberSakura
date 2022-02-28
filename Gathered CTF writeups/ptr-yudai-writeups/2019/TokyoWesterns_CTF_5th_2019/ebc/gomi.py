@@ -1,0 +1,115 @@
+from z3 import *
+
+x = BitVec("r1", 64)
+s = Solver()
+
+r1 = x
+r1 = (r1 << 0x0b) | (r1 >> 0x35)
+r1 = (r1 << 0x23) | (r1 >> 0x1d)
+r1 = r1 | 0x0000800000001042
+r1 = r1 ^ 0x9c5cf234efd6a13e
+r1 = r1 - 0x127e2cc80b3bbf03
+r1 = (r1 << 0x23) | (r1 >> 0x1d)
+r1 = r1 - 0xee5744efe81e97b7
+r1 = r1 - 0x6164b99c58e8abfc
+r1 = (r1 << 0x27) | (r1 >> 0x19)
+r1 = (r1 << 0x23) | (r1 >> 0x1d)
+r1 = (r1 << 0x18) | (r1 >> 0x28)
+r1 = r1 ^ 0xee5744efe81e97b7
+r1 = (r1 << 0x37) | (r1 >> 0x09)
+r1 = (r1 << 0x29) | (r1 >> 0x17)
+r1 = r1 + 0x8bce90e8f5931159
+r1 = r1 + 0x8bce90e8f5931159
+r1 = (r1 << 0x3a) | (r1 >> 0x06)
+r1 = r1 + 0x61553c85a2f4e8b9
+r1 = (0xffffffffffffffff ^ r1) + 1
+r1 = r1 + 0xdbdfdb26a8dda2a5
+r1 = r1 - 0xc8f4cee61a3aa135
+r1 = (0xffffffffffffffff ^ r1) + 1
+r1 = r1 + 0xdbdfdb26a8dda2a5
+r1 = (r1 << 0x06) | (r1 >> 0x3a)
+r1 = (0xffffffffffffffff ^ r1) + 1
+r1 = (0xffffffffffffffff ^ r1) + 1
+r1 = (r1 << 0x35) | (r1 >> 0x0b)
+r1 = (r1 << 0x1c) | (r1 >> 0x24)
+r1 = (r1 << 0x07) | (r1 >> 0x39)
+r1 = (r1 << 0x15) | (r1 >> 0x2b)
+r1 = r1 + 0x0845024e5f2d6707
+r1 = (r1 << 0x05) | (r1 >> 0x3b)
+r1 = (0xffffffffffffffff ^ r1) + 1
+r1 = r1 + 0x68a2ad5c9eed7637
+r1 = r1 - 0x68a2ad5c9eed7637
+r1 = r1 - 0xc6f5da8c0653b587
+r1 = r1 + 0x26e252b729c1fcf3
+r1 = (0xffffffffffffffff ^ r1) + 1
+r1 = (r1 << 0x2b) | (r1 >> 0x15)
+r1 = r1 | 0x0100802410000000
+r1 = r1 + 0x20b1eed5978e4900
+r1 = r1 + 0x26e252b729c1fcf3
+r1 = r1 ^ 0x57f6039b9121919f
+r1 = r1 | 0x1000b00000000200
+r1 = (r1 << 0x19) | (r1 >> 0x27)
+r1 = r1 | 0x0001000008004050
+r1 = r1 - 0x8d1288746f13d07a
+r1 = (r1 << 0x31) | (r1 >> 0x0f)
+r1 = (r1 << 0x34) | (r1 >> 0x0c)
+r1 = (r1 << 0x33) | (r1 >> 0x0d)
+r1 = (r1 << 0x10) | (r1 >> 0x27)
+r1 = (r1 << 0x3b) | (r1 >> 0x05)
+r1 = (r1 << 0x28) | (r1 >> 0x18)
+r1 = r1 - 0x86f7c7788d7312b7
+r1 = (r1 << 0x03) | (r1 >> 0x3d)
+r1 = (r1 << 0x3b) | (r1 >> 0x05)
+r1 = r1 + 0x02d0044eba95ce96
+r1 = r1 ^ 0x3aedcf06e6c9453a
+r1 = r1 - 0x02d0044eba95ce96
+r1 = (r1 << 0x2f) | (r1 >> 0x11)
+r1 = r1 - 0x6debc33d4052094e
+r1 = r1 ^ 0xbaaa128eab882ec7
+r1 = r1 ^ 0xa0af8f9b2b660425
+r1 = (r1 << 0x2a) | (r1 >> 0x16)
+r1 = r1 + 0xdf15b52c730de0d5
+r1 = (r1 << 0x3e) | (r1 >> 0x02)
+r1 = (r1 << 0x28) | (r1 >> 0x18)
+r1 = (r1 << 0x06) | (r1 >> 0x3a)
+r1 = r1 - 0x8483749c2bf725e5
+r1 = r1 + 0x8483749c2bf725e5
+r1 = r1 - 0x5f83322e8e609516
+r1 = r1 - 0xbe3d9ed838a1e4f1
+r1 = r1 + 0xbe3d9ed838a1e4f1
+r1 = (0xffffffffffffffff ^ r1) + 1
+r1 = (r1 << 0x06) | (r1 >> 0x3a)
+r1 = r1 ^ 0x53066531dce7cfcd
+r1 = r1 ^ 0xffffffffffffffff
+r1 = r1 ^ 0x73e41cc039005b80
+r1 = (r1 << 0x0f) | (r1 >> 0x31)
+r1 = r1 - 0xa07ff10d5a0992d3
+r1 = (r1 << 0x2a) | (r1 >> 0x16)
+r1 = r1 | 0x0000010040908000
+r1 = r1 - 0x2e96a4b4e11cf6ed
+r1 = r1 ^ 0xffffffffffffffff
+r1 = r1 | 0x0002410804000000
+r1 = (r1 << 0x09) | (r1 >> 0x37)
+r1 = (r1 << 0x06) | (r1 >> 0x3a)
+r1 = r1 - 0x5882fa3961f1cd27
+r1 = r1 - 0xd5e2f69d09b36753
+r1 = r1 ^ 0x25f194e6d9ecbbe2
+r1 = (r1 << 0x08) | (r1 >> 0x38)
+r1 = r1 - 0x03d89f4838dc8b5a
+r1 = r1 | 0x0000040201003000
+r1 = r1 - 0x99c192529caa0de6
+r1 = r1 + 0x25f194e6d9ecbbe2
+r1 = (0xffffffffffffffff ^ r1) + 1
+r1 = r1 + 0x6c8391b5e522cf9f
+r1 = r1 + 0xfd31484ed5fce17c
+r1 = (r1 << 0x12) | (r1 >> 0x2e)
+r1 = (r1 << 0x37) | (r1 >> 0x09)
+#print(r1)
+s.add(r1 == 0xc652a134ee9daa02)
+
+r = s.check()
+if r == sat:
+    m = s.model()
+    print(m)
+else:
+    print(r)
