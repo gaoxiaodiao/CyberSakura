@@ -1,0 +1,1 @@
+wfuzz  --hh 0 -w usrshareseclistsDiscoveryDNSsubdomains-top1million-5000.txt  -H 'Host FUZZ.quick.htb' -u http10.10.10.186

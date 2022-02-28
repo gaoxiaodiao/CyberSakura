@@ -1,0 +1,18 @@
+<?php
+$hash = 'e626d51f8fbfd1124fdea88396c35d05';
+// $fn = fopen("./myfile.txt","r");
+$fn = fopen("/usr/share/wordlists/rockyou.txt","r");
+while(! feof($fn))  {
+	$password = fgets($fn);
+  $password = trim($password);
+  // echo $password."\n";
+  $computedHash = md5(crypt($password,'fa'));
+  // echo $computedHash;
+  if($hash == $computedHash){
+    echo "Password Found: ". $password."\n";
+    fclose($fn);
+    exit(0);
+  }
+  }
+fclose($fn);
+?>

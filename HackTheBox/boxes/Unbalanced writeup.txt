@@ -1,0 +1,17 @@
+USER.txt:
+
+ssh bryan@10.10.10.200
+
+Pass: ireallyl0vebubblegum!!!
+
+
+ROOT.txt:
+
+After that just type su root
+
+Pass: bUbBl3gUm$43v3Ry0n3!
+
+
+
+HASH:
+root hash: 6HrNX81SE9mBkmNY$oIh9jCV496j4WOURXy/NYMp0cKFLavEAnpsK/KF.spP/yv8ONiIphzBsi3YnIVkFFgFEAak5yMaTi5zbMwIYw1

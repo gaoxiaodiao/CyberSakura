@@ -1,0 +1,3 @@
+cargo build --examples
+cargo run --manifest-path=tools/apps/Cargo.toml --bin quiche-client -- --no-verify  https://portal.quick.htb/index.php?view=about
+cargo run --manifest-path=tools/apps/Cargo.toml --bin quiche-client -- --no-verify  https://portal.quick.htb/index.php?view=docs

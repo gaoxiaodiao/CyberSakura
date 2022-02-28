@@ -1,0 +1,1 @@
+ssh -i ./srvadm.key srvadm@$IP
